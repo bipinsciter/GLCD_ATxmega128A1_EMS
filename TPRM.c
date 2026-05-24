@@ -473,6 +473,7 @@ int main(void)                 // Main runs under the AvrX Stack
 		if(ms50 == 1)
 		{
 			UARTC0RxTimeout();
+			UARTC1RxTimeout();
 			
 			UserInterfaceTask();	//50 msec
 			

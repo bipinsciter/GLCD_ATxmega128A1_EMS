@@ -105,11 +105,12 @@ static void SendPacket( uint8_t dataId, char * dataVal, uint8_t dataLen );
 static int MakeAllRuntimeParaXmitSrting();
  void vBaseTimerCallback( TimerHandle_t xBaseTimer);
  
-static uint8_t cmdId;
-static char rxDataBuffer[RX0_BUFSZ];
+static uint8_t cmdId,cmdId1;
+static char rxDataBuffer[2][RX0_BUFSZ];
 static char txDataBuffer[TX0_BUFSZ];
 static int paraValue;
-static uint8_t rxDataLen=0, rxMode=0, msgRcvd=0, RxTimeout=0;
+static uint8_t rxDataLen[2]={0}, rxMode=0, msgRcvd=0, RxTimeout=0;
+static uint8_t rxMode1=0, msgRcvd1=0, RxTimeout1=0;
 
 uint8_t u8_resetTimer=0,u8_DFUresetTimer=0;
 	
@@ -159,27 +160,27 @@ ISR(USARTC0_RXC_vect)
 	{
 		if((ch==GetParameterValue( DEVICE_ID )) || (ch==0x00))
 		{
-			rxDataBuffer[rxDataLen++]=ch;
+			rxDataBuffer[0][rxDataLen[0]++]=ch;
 			rxMode=2;
 			RxTimeout = 4;
 		}
 		else
 		{
 			rxMode=0;
-			rxDataLen=0;
+			rxDataLen[0]=0;
 			RxTimeout = 0;
 		}
 	}
 	else if(rxMode==2)
 	{
 		cmdId = ch;
-		rxDataBuffer[rxDataLen++]=ch;
+		rxDataBuffer[0][rxDataLen[0]++]=ch;
 		rxMode=4;
 	}
 	else if(rxMode==3)
 	{
 		cmdId = ch;
-		rxDataBuffer[rxDataLen++]=ch;
+		rxDataBuffer[0][rxDataLen[0]++]=ch;
 		rxMode=4;
 	}
 	else if(rxMode==4)
@@ -190,23 +191,23 @@ ISR(USARTC0_RXC_vect)
 			RxTimeout = 0;
 			
 			uint8_t crcVal;
-			crcVal=CalCRC((uint8_t*)&rxDataBuffer[0],rxDataLen-1);
-			if(rxDataBuffer[rxDataLen-1]==crcVal)
+			crcVal=CalCRC((uint8_t*)&rxDataBuffer[0][0],rxDataLen[0]-1);
+			if(rxDataBuffer[0][rxDataLen[0]-1]==crcVal)
 			{
 				msgRcvd = 1;
 			}
 			else
 			{
-				rxDataLen=0;
+				rxDataLen[0]=0;
 			}
 		}
 		else
 		{
-			rxDataBuffer[rxDataLen++]=ch;
+			rxDataBuffer[0][rxDataLen[0]++]=ch;
 			RxTimeout = 4;
 		}
 	}
-	if(rxDataLen>=RX0_BUFSZ) rxDataLen=0;
+	if(rxDataLen[0]>=RX0_BUFSZ) rxDataLen[0]=0;
 }
 
 ISR(USARTC0_DRE_vect)
@@ -240,17 +241,124 @@ void UARTC0RxTimeout(void)
 		{
 			msgRcvd=0;
 			rxMode=0;
-			rxDataLen=0;
+			rxDataLen[0]=0;
+		}
+	}
+}
+
+//=============================================================================================================
+ISR(USARTC1_RXC_vect)
+{	
+	uint8_t ch;
+
+    /* Get the character and post it on the queue of Rxed characters.
+    If the post causes a task to wake force a context switch as the woken task
+    may have a higher priority than the task we have interrupted. */
+    ch = USARTC1_DATA;
+	
+	if(msgRcvd1==1) return;
+
+	if((ch==SERIAL_CMD_SOT) && (!rxMode1))
+	{
+		rxMode1=1;
+		RxTimeout1 = 4;
+	}
+	else if(rxMode1==1)
+	{
+		if((ch==GetParameterValue( DEVICE_ID )) || (ch==0x00))
+		{
+			rxDataBuffer[1][rxDataLen[1]++]=ch;
+			rxMode1=2;
+			RxTimeout1 = 4;
+		}
+		else
+		{
+			rxMode1=0;
+			rxDataLen[1]=0;
+			RxTimeout1 = 0;
+		}
+	}
+	else if(rxMode1==2)
+	{
+		cmdId = ch;
+		rxDataBuffer[1][rxDataLen[1]++]=ch;
+		rxMode=4;
+	}
+	else if(rxMode==3)
+	{
+		cmdId1 = ch;
+		rxDataBuffer[1][rxDataLen[1]++]=ch;
+		rxMode1=4;
+	}
+	else if(rxMode1==4)
+	{
+		if(ch==SERIAL_CMD_EOT)
+		{
+			rxMode1=0;
+			RxTimeout1 = 0;
+			
+			uint8_t crcVal;
+			crcVal=CalCRC((uint8_t*)&rxDataBuffer[1][0],rxDataLen[1]-1);
+			if(rxDataBuffer[1][rxDataLen[1]-1]==crcVal)
+			{
+				msgRcvd1 = 1;
+			}
+			else
+			{
+				rxDataLen[1]=0;
+			}
+		}
+		else
+		{
+			rxDataBuffer[1][rxDataLen[1]++]=ch;
+			RxTimeout1 = 4;
+		}
+	}
+	if(rxDataLen[1]>=RX1_BUFSZ) rxDataLen[1]=0;
+}
+
+ISR(USARTC1_DRE_vect)
+{
+	signed char cChar, cTaskWoken = pdFALSE;
+
+	if( xQueueReceiveFromISR( vUSARTC1_TxQueue, &cChar, &cTaskWoken ) == pdTRUE )
+	{
+		/* Send the next character queued for Tx. */
+		USARTC1_DATA = cChar;
+	}
+	else
+	{
+		/* Queue empty, nothing to send. */
+		USARTC1_CTRLA &= ~(USART_DREINTLVL_gm);			// Disable UDRE interrupt
+	}
+}
+
+ISR(USARTC1_TXC_vect)
+{
+	TX1_DIS_RS485;
+	USARTC1_CTRLA &= ~(USART_TXCINTLVL_gm);			// Disable UTXC interrupt
+}
+
+void UARTC1RxTimeout(void)
+{
+	if(RxTimeout1)
+	{
+		RxTimeout1--;
+		if(!RxTimeout1)
+		{
+			msgRcvd1=0;
+			rxMode1=0;
+			rxDataLen[1]=0;
 		}
 	}
 }
 
 void SerialInterfaceTask( void )
 {
-	uint8_t ch, i = 0;
+	uint8_t ch, i=0, Ind = 0;
 	int16_t tempshort = 0;
 				 
-	if(msgRcvd==1)
+	if((msgRcvd==1) || (msgRcvd1==1))
 	{
 		if(gu8_IsCOMDisable)
 		{
@@ -262,11 +370,18 @@ void SerialInterfaceTask( void )
 			{
 				msgRcvd=0;
 				rxMode=0;
-				rxDataLen=0;
+				rxDataLen[0]=0;
+				
+				msgRcvd1=0;
+				rxMode1=0;
+				rxDataLen[1]=0;
+				
 				return;
 			}
 		}
 		
+		if (msgRcvd==1) Ind=0;
+		else Ind=1;
 		
         // Valid packet is detected. Process it.
         //OSSemaTakeEver(SerialDeviceMutex);
@@ -274,7 +389,7 @@ void SerialInterfaceTask( void )
         {
 			case PUT_DFU_ID:
 			 
-				tempshort = findValue(&rxDataBuffer[2],rxDataLen-3);
+				tempshort = findValue(&rxDataBuffer[Ind][2],rxDataLen[Ind]-3);
 				if(tempshort==DFU_PASSWORD)
 				{
 					OSWriteEEPromWord((unsigned int *)DFU_NUMBER_LOGIC, 0xABCD);
@@ -288,9 +403,9 @@ void SerialInterfaceTask( void )
 			
 			case LCD_CONTROL_ID:
 			
-				if((rxDataBuffer[2]=='0') || (rxDataBuffer[2]=='1'))
+				if((rxDataBuffer[Ind][2]=='0') || (rxDataBuffer[Ind][2]=='1'))
 				{
-					gu8_IsLCDDisable=rxDataBuffer[2]-'0';
+					gu8_IsLCDDisable=rxDataBuffer[Ind][2]-'0';
 					OSWriteEEPromWord((unsigned int *)LCD_CONTROL_ADDR, (unsigned int)gu8_IsLCDDisable);
 					SendPacket( LCD_CONTROL_ID, txDataBuffer, i);
 					u8_resetTimer = 3;
@@ -300,9 +415,9 @@ void SerialInterfaceTask( void )
 			
 			case COM_CONTROL_ID:
 			
-				if((rxDataBuffer[2]=='0') || (rxDataBuffer[2]=='1'))
+				if((rxDataBuffer[Ind][2]=='0') || (rxDataBuffer[Ind][2]=='1'))
 				{
-					gu8_IsCOMDisable=rxDataBuffer[2]-'0';
+					gu8_IsCOMDisable=rxDataBuffer[Ind][2]-'0';
 					OSWriteEEPromWord((unsigned int *)COM_CONTROL_ADDR, (unsigned int)gu8_IsCOMDisable);
 					SendPacket( COM_CONTROL_ID, txDataBuffer, i);
 				}
@@ -420,63 +535,39 @@ void SerialInterfaceTask( void )
                 SendPacket( READ_PID_PER_VALUES, txDataBuffer, 8 );
 				break;
 
-//		     case START_LOG_READING:
-//					break;
-//		     case ERASE_LOG_READING:
-//					break;
-//		     case READ_LOG_NEXT:
-//					break;
-//		     case READ_LOG_CURRENT:
-//					break;
-
 		    case READ_INPUT:
-               	//if( rxDataLen != (uint8_t)3 )
-               	//{
-    		        //txDataBuffer[0] = ERROR_PARA_INVALID;
-	    			//SendPacket( READ_INPUT, txDataBuffer, 1);
-		    		//break;
-			    //}
+
                 GetInput( (uint8_t*)&txDataBuffer[1] );  // return value
   		   		txDataBuffer[0] = ERROR_OK;
                 SendPacket( READ_INPUT, txDataBuffer, 2 );
 				break;
 
 		    case READ_OUTPUT:
-               	//if( rxDataLen != (uint8_t)4 )
-               	//{
-    		        //txDataBuffer[0] = ERROR_PARA_INVALID;
-	    			//SendPacket( READ_OUTPUT, txDataBuffer, 1);
-		    		//break;
-			    //}
+
                 GetOutput( (uint8_t*)&txDataBuffer[1] );  // return value
   		   		txDataBuffer[0] = ERROR_OK;
                 SendPacket( READ_OUTPUT, txDataBuffer, 2 );
 				break;
 
 		    case WRITE_OUTPUT:
-               	//if( rxDataLen != (uint8_t)4 )
-               	//{
-	               	//txDataBuffer[0] = ERROR_PARA_INVALID;
-	               	//SendPacket( WRITE_OUTPUT, txDataBuffer, 1);
-	               	//break;
-               	//}
- 			    SetOutput( (uint8_t)rxDataBuffer[3], (uint8_t*)&txDataBuffer[1] );  // set value, return value
+
+ 			    SetOutput( (uint8_t)rxDataBuffer[Ind][3], (uint8_t*)&txDataBuffer[1] );  // set value, return value
  				txDataBuffer[0] = ERROR_OK;
                	SendPacket( WRITE_OUTPUT, txDataBuffer, 2 );
-				OSWriteEEPromWord((unsigned int *)EA_OUTPUT, rxDataBuffer[3]);
+				OSWriteEEPromWord((unsigned int *)EA_OUTPUT, rxDataBuffer[Ind][3]);
 				break;
 
 
 		    case READ_PARAMETER:
 					
-				if( rxDataLen < (uint8_t)1 )
+				if( rxDataLen[Ind] < (uint8_t)1 )
 				{
     		        txDataBuffer[0] = ERROR_PARA_INVALID;
 	    			SendPacket( READ_PARAMETER, txDataBuffer, 1);
 		    		break;
 			    }
 					
-				switch((uint8_t)rxDataBuffer[2])
+				switch((uint8_t)rxDataBuffer[Ind][2])
 				{
 					case IP1_HIGH_NAME:
 					case IP1_LOW_NAME:
@@ -495,29 +586,29 @@ void SerialInterfaceTask( void )
 					case OP4_HIGH_NAME:
 					case OP4_LOW_NAME:
 						
-						//ch = GetParameterStr( (uint8_t)rxDataBuffer[2], (uint8_t*)&rxDataBuffer[3] );
-						memcpy(&rxDataBuffer[3],&gu8_inOutput[(uint8_t)rxDataBuffer[2]-IP1_HIGH_NAME][0],8);
+						//ch = GetParameterStr( (uint8_t)rxDataBuffer[Ind][2], (uint8_t*)&rxDataBuffer[Ind][3] );
+						memcpy(&rxDataBuffer[Ind][3],&gu8_inOutput[(uint8_t)rxDataBuffer[Ind][2]-IP1_HIGH_NAME][0],8);
 						ch = ERROR_OK;
 							
 						txDataBuffer[0] = ch;
-						txDataBuffer[1] = rxDataBuffer[2];
+						txDataBuffer[1] = rxDataBuffer[Ind][2];
 						if( ch != ERROR_OK )
 						{
 							SendPacket( READ_PARAMETER, txDataBuffer, 2);
 						}
 						else
 						{
-							memcpy(&txDataBuffer[2],&gu8_inOutput[(uint8_t)rxDataBuffer[2]-IP1_HIGH_NAME][0],8);
+							memcpy(&txDataBuffer[2],&gu8_inOutput[(uint8_t)rxDataBuffer[Ind][2]-IP1_HIGH_NAME][0],8);
 							SendPacket( READ_PARAMETER, txDataBuffer, 10);
 						}
 						
 					break;
 					default:
 						
-						ch = GetParameter( rxDataBuffer[2], &paraValue );
+						ch = GetParameter( rxDataBuffer[Ind][2], &paraValue );
 							
 						txDataBuffer[0] = ch;
-						txDataBuffer[1] = rxDataBuffer[2];
+						txDataBuffer[1] = rxDataBuffer[Ind][2];
 						if( ch != ERROR_OK )
 						{
 							SendPacket( READ_PARAMETER, txDataBuffer, 2);
@@ -532,14 +623,14 @@ void SerialInterfaceTask( void )
 				}
 				break;
 		    case WRITE_PARAMETER:
-                if( rxDataLen < (uint8_t)2 )
+                if( rxDataLen[Ind] < (uint8_t)2 )
 				{
   					txDataBuffer[0] = ERROR_PARA_INVALID;
 	    			SendPacket( WRITE_PARAMETER, txDataBuffer, 1);
 		    		break;
 			    }
 				  
-				switch((uint8_t)rxDataBuffer[2])
+				switch((uint8_t)rxDataBuffer[Ind][2])
 				{
 					case IP1_HIGH_NAME:
 					case IP1_LOW_NAME:
@@ -558,19 +649,19 @@ void SerialInterfaceTask( void )
 					case OP4_HIGH_NAME:
 					case OP4_LOW_NAME:
 					  
-						memset(&gu8_inOutput[(uint8_t)rxDataBuffer[2]-IP1_HIGH_NAME][0],0,10);
-						memcpy(&gu8_inOutput[(uint8_t)rxDataBuffer[2]-IP1_HIGH_NAME][0],&rxDataBuffer[3],8);					  
-						ch = SetParameterStr( (uint8_t)rxDataBuffer[2], (uint8_t*)&gu8_inOutput[(uint8_t)rxDataBuffer[2]-IP1_HIGH_NAME][0] );
+						memset(&gu8_inOutput[(uint8_t)rxDataBuffer[Ind][2]-IP1_HIGH_NAME][0],0,10);
+						memcpy(&gu8_inOutput[(uint8_t)rxDataBuffer[Ind][2]-IP1_HIGH_NAME][0],&rxDataBuffer[Ind][3],8);					  
+						ch = SetParameterStr( (uint8_t)rxDataBuffer[Ind][2], (uint8_t*)&gu8_inOutput[(uint8_t)rxDataBuffer[Ind][2]-IP1_HIGH_NAME][0] );
 						  
 						txDataBuffer[0] = ch;
-						txDataBuffer[1] = rxDataBuffer[2];
+						txDataBuffer[1] = rxDataBuffer[Ind][2];
 						if( ch != ERROR_OK )
 						{
 							SendPacket( WRITE_PARAMETER, txDataBuffer, 2);
 						}
 						else
 						{
-							memcpy(&txDataBuffer[2],&rxDataBuffer[3],8);
+							memcpy(&txDataBuffer[2],&rxDataBuffer[Ind][3],8);
 							SendPacket( WRITE_PARAMETER, txDataBuffer, 10);
 						}
 					  
@@ -578,10 +669,10 @@ void SerialInterfaceTask( void )
 					  
 					default:
 					  
-					paraValue = atoi( &rxDataBuffer[3] );
-					ch = SetParameter( rxDataBuffer[2], &paraValue );
+					paraValue = atoi( &rxDataBuffer[Ind][3] );
+					ch = SetParameter( rxDataBuffer[Ind][2], &paraValue );
 					txDataBuffer[0] = ch;
-					txDataBuffer[1] = rxDataBuffer[2];
+					txDataBuffer[1] = rxDataBuffer[Ind][2];
 					if( ch != ERROR_OK )
 						SendPacket( WRITE_PARAMETER, txDataBuffer, 2);
 					else
@@ -600,8 +691,16 @@ void SerialInterfaceTask( void )
 				break;
 		}
         //OSSemaGive(SerialDeviceMutex);
-		msgRcvd = 0;
-		rxDataLen = 0;
+		if(Ind==0)
+		{
+			msgRcvd = 0;
+		}
+		else 
+		{
+			msgRcvd1 = 0;
+		}
+		
+		rxDataLen[Ind] = 0;
     }
 }
 
@@ -620,7 +719,11 @@ void SerialInterfaceTask( void )
 	
 	msgRcvd=0;
 	rxMode=0;
-	rxDataLen=0;
+	rxDataLen[0]=0;
+	
+	msgRcvd1=0;
+	rxMode1=0;
+	rxDataLen[1]=0;
  }
 
 
@@ -1004,7 +1107,7 @@ void SerialInterfaceInit()
    stopbit = (databits & SERIAL_STOP_BIT_MASK) >> SERIAL_STOP_BIT_SHIFT;
    
    InitUSART(&USARTC0, &PORTC, PIN2_bm, PIN3_bm, baudrate, noOfbits, parity, stopbit);
-   //InitUSART(&USARTC1, &PORTC, PIN6_bm, PIN7_bm, baudrate, noOfbits, parity, stopbit);
+   InitUSART(&USARTC1, &PORTC, PIN6_bm, PIN7_bm, baudrate, noOfbits, parity, stopbit);
    //InitUSART(&USARTD0, &PORTD, PIN2_bm, PIN3_bm, baudrate, noOfbits, parity, stopbit);
    //InitUSART(&USARTE0, &PORTE, PIN2_bm, PIN3_bm, baudrate, noOfbits, parity, stopbit);
 
