@@ -1,0 +1,987 @@
+#include <avr/io.h>        // This defers to avr/io.h for GCC
+#include <stdlib.h>
+#include <avr/wdt.h>
+#include <util/delay.h>
+#include "os_api.h"
+#include "error.h"
+#include "DeviceIO.h"
+#include "HardwareInfo.h"
+#include "TempRHSens.h"
+#include "UserInterface.h"
+#include "SerialInterface.h"
+#include "DAC7573.h"
+#include "locked_printf.h"
+#include "PressureSens.h"
+#include "eepromAdr.h"
+//#include "ParticalSenser_IPS7100.h"
+//#include "ParticalSenser_SEN55.h"
+
+#define TRUE  1
+#define FALSE 0
+
+#define SENSOR_1  0
+#define SENSOR_2  1
+
+static SENSOR_VALUE sensorVal[TOTAL_VAL_INDEX];
+
+// Kalman filter structure
+typedef struct {
+	float Q;       // Process noise covariance
+	float R;       // Measurement noise covariance
+	float X;       // State estimate
+	float P;       // Estimate covariance
+	float K;       // Kalman gain
+} KalmanFilter;
+static KalmanFilter Kalmanfilter[TOTAL_VAL_INDEX] = {0};
+	
+void Kalman_Init(KalmanFilter *kf, float q, float r, float initial_estimate);
+int Kalman_Update(KalmanFilter *kf, float measurement);
+
+// Initialize the Kalman filter
+void Kalman_Init(KalmanFilter *kf, float q, float r, float initial_estimate)
+{
+	kf->Q = q;          // Process noise covariance
+	kf->R = r;          // Measurement noise covariance
+	kf->X = initial_estimate;  // Initial estimate
+	kf->P = 1.0;        // Initial estimate covariance
+}
+
+// Update the Kalman filter with a new measurement
+int Kalman_Update(KalmanFilter *kf, float measurement)
+{
+	// Prediction update
+	kf->P += kf->Q;
+
+	// Measurement update
+	kf->K = kf->P / (kf->P + kf->R);
+	kf->X += kf->K * (measurement - kf->X);
+	kf->P *= (1 - kf->K);
+
+	return (int)kf->X;
+}
+
+
+	
+//static OSSemaMutex DeviceValueMutex;
+
+static void AveragePara( uint8_t SenNo, uint8_t error, unsigned int rawVal, int convertedVal );
+
+static void DoIOPortMapping();
+
+static ALARMS alarmOut;
+static ALARMS oldAlarmOut;
+static ALARMS buzzerOut;
+static LEDS ledState;
+static SENSOR_VALUE senVal;
+//static sen5x_measured_value_t sen55;
+
+//#pragma GCC push_options
+//#pragma GCC optimize ("O0")
+
+/*
+   Device IO Task
+*/
+
+void DEVICEIO_FUNC_NAME( void )
+{
+	uint8_t retVal;
+	//uint16_t value1=0;
+	int value;//, temprValue;
+	int convertedValue;
+	static uint16_t TempfireAlmTimer=0,TempAlmTimer=0;
+	
+	systemError = ERROR_OK;
+
+	if (IsDP1Enabled())
+	{
+		retVal = GetSensorDP1_SM9543( &value );
+		  
+		// Convert the value to PSI
+		convertedValue = value + GetParameterValue(DP1_ZERO_ADJ);
+		AveragePara(DP1_VAL_INDEX, retVal, value, convertedValue );
+	}
+		
+	if (IsDP2Enabled())
+	{
+		retVal = GetSensorDP2_SM9543( &value );
+		 
+		// Convert the value to PSI
+		convertedValue = value + GetParameterValue(DP2_ZERO_ADJ);
+		AveragePara(DP2_VAL_INDEX, retVal, value, convertedValue );
+	}
+	  
+	if (IsDP3Enabled())
+	{
+		retVal = GetSensorDP3_SM9543( &value );
+
+		// Convert the value to PSI
+		convertedValue = value + GetParameterValue(DP3_ZERO_ADJ);		
+		AveragePara(DP3_VAL_INDEX, retVal, value, convertedValue );
+	}
+		
+	oldAlarmOut.alarmByte = alarmOut.alarmByte;
+	if (IsAlarmEnabled())
+	{
+		if( IsDP1Enabled() && GetParameterValue(DP1_ALARM_SETUP) != ALARM_DISABLED)
+		{
+			GetPareValue(DP1_VAL_INDEX, &senVal);//GetDP1( &senVal );
+			if( senVal.errorCode == ERROR_OK )
+			{
+				if( senVal.convertedValue < GetParameterValue(DP1_LOWER_ALARM_ON_LIMIT))
+					alarmOut.alarm.absPressLow = 1;
+				if( senVal.convertedValue > GetParameterValue(DP1_UPPER_ALARM_ON_LIMIT))
+					alarmOut.alarm.absPressHigh = 1;
+				if( senVal.convertedValue > GetParameterValue(DP1_LOWER_ALARM_OFF_LIMIT))
+					alarmOut.alarm.absPressLow = 0;
+				if( senVal.convertedValue < GetParameterValue(DP1_UPPER_ALARM_OFF_LIMIT))
+					alarmOut.alarm.absPressHigh = 0;
+
+				ledState.led.absPressAlarm = alarmOut.alarm.absPressLow | alarmOut.alarm.absPressHigh;
+				ledState.led.absPressOk = ~alarmOut.alarm.absPressHigh;
+			}
+			else
+			{
+				ledState.led.absPressOk = ledState.led.absPressAlarm = 0;
+			}
+		}
+		else
+		{
+			ledState.led.absPressOk = ledState.led.absPressAlarm = 0;
+			alarmOut.alarm.absPressLow = 0;
+			alarmOut.alarm.absPressHigh = 0;
+		}
+
+		if( IsDP2Enabled() && GetParameterValue(DP2_ALARM_SETUP) != ALARM_DISABLED)
+		{
+			GetPareValue(DP2_VAL_INDEX, &senVal);//GetDP2( &senVal );
+			if( senVal.errorCode == ERROR_OK )
+			{
+				if( senVal.convertedValue < GetParameterValue(DP2_LOWER_ALARM_ON_LIMIT))
+				alarmOut.alarm.diffPressLow = 1;
+				if( senVal.convertedValue > GetParameterValue(DP2_UPPER_ALARM_ON_LIMIT))
+				alarmOut.alarm.diffPressHigh = 1;
+				if( senVal.convertedValue > GetParameterValue(DP2_LOWER_ALARM_OFF_LIMIT))
+				alarmOut.alarm.diffPressLow = 0;
+				if( senVal.convertedValue < GetParameterValue(DP2_UPPER_ALARM_OFF_LIMIT))
+				alarmOut.alarm.diffPressHigh = 0;
+
+				ledState.led.diffPressAlarm = alarmOut.alarm.diffPressHigh | alarmOut.alarm.diffPressLow;
+				ledState.led.diffPressOk = ~alarmOut.alarm.diffPressHigh;
+			}
+			else
+			{
+				ledState.led.diffPressOk = ledState.led.diffPressAlarm = 0;
+			}
+		}
+		else
+		{
+			ledState.led.diffPressOk = ledState.led.diffPressAlarm = 0;
+			alarmOut.alarm.diffPressLow = 0;
+			alarmOut.alarm.diffPressHigh = 0;
+		}
+			
+			
+		if( IsDP3Enabled() && GetParameterValue(DP3_ALARM_SETUP) != ALARM_DISABLED)
+		{
+			GetPareValue(DP3_VAL_INDEX, &senVal);//GetDP3( &senVal );
+			if( senVal.errorCode == ERROR_OK )
+			{
+				if( senVal.convertedValue < GetParameterValue(DP3_LOWER_ALARM_ON_LIMIT))
+				alarmOut.alarm.diffPress3Low = 1;
+				if( senVal.convertedValue > GetParameterValue(DP3_UPPER_ALARM_ON_LIMIT))
+				alarmOut.alarm.diffPress3High = 1;
+				if( senVal.convertedValue > GetParameterValue(DP3_LOWER_ALARM_OFF_LIMIT))
+				alarmOut.alarm.diffPress3Low = 0;
+				if( senVal.convertedValue < GetParameterValue(DP3_UPPER_ALARM_OFF_LIMIT))
+				alarmOut.alarm.diffPress3High = 0;
+
+				ledState.led.diffPress3Alarm = alarmOut.alarm.diffPress3High | alarmOut.alarm.diffPress3Low;
+				ledState.led.diffPress3Ok = ~alarmOut.alarm.diffPress3High;
+			}
+			else
+			{
+				ledState.led.diffPress3Ok = ledState.led.diffPress3Alarm = 0;
+			}
+		}
+		else
+		{
+			ledState.led.diffPress3Ok = ledState.led.diffPress3Alarm = 0;
+			alarmOut.alarm.diffPress3Low = 0;
+			alarmOut.alarm.diffPress3High = 0;
+		}
+			
+		//if (IsTemperatureEnabled() && GetParameterValue(TEMP_ALARM_SETUP) != ALARM_DISABLED)
+		if (IsTemperatureEnabled())
+		{
+			GetPareValue(TEMPERATURE_VAL_INDEX, &senVal);//GetTemperature( &senVal );
+			if( senVal.errorCode == ERROR_OK )
+			{
+				if(GetParameterValue(TEMP_ALARM_SETUP) != ALARM_DISABLED)
+				{
+					if( senVal.convertedValue < GetParameterValue(TEMP_LOWER_ALARM_ON_LIMIT))
+					alarmOut.alarm.tempLow = 1;
+					if( senVal.convertedValue > GetParameterValue(TEMP_UPPER_ALARM_ON_LIMIT))
+					{
+						alarmOut.alarm.tempHigh = 1;
+						TempAlmTimer++;
+						if(TempAlmTimer>60)
+						{
+							TempAlmTimer=0;
+							OUTPUT5_HIGH;
+						}
+					}
+						
+					if( senVal.convertedValue > GetParameterValue(TEMP_LOWER_ALARM_OFF_LIMIT))
+					alarmOut.alarm.tempLow = 0;
+					if( senVal.convertedValue < GetParameterValue(TEMP_UPPER_ALARM_OFF_LIMIT))
+					{
+						alarmOut.alarm.tempHigh = 0;
+						OUTPUT5_LOW;
+					}
+						
+
+					ledState.led.tempAlarm = alarmOut.alarm.tempLow | alarmOut.alarm.tempHigh;
+					ledState.led.tempOk = ~alarmOut.alarm.tempHigh;
+				}
+				else
+				{
+					ledState.led.tempOk = ledState.led.tempAlarm = 0;
+				}
+					
+				if( senVal.convertedValue >= GetParameterValue(TEMP_FIRE_ALM_SET))
+				{
+					TempfireAlmTimer++;
+					if(TempfireAlmTimer>=GetParameterValue(TEMP_FIRE_ALM_TIME))
+					{
+						alarmOut.alarm.fire = 1;
+						TempfireAlmTimer=0;
+					}
+				}
+				else
+				{
+					TempfireAlmTimer=0;
+					alarmOut.alarm.fire = 0;
+				}
+			}
+			else
+			{
+				ledState.led.tempOk = ledState.led.tempAlarm = 0;
+				alarmOut.alarm.fire = 0;
+			}
+		}
+		else
+		{
+			ledState.led.tempOk = ledState.led.tempAlarm = 0;
+			alarmOut.alarm.tempLow = 0;
+			alarmOut.alarm.tempHigh = 0;
+			alarmOut.alarm.fire = 0;
+		}
+
+		if (IsHumidityEnabled() && GetParameterValue(RH_ALARM_SETUP) != ALARM_DISABLED)
+		{
+			GetPareValue(HUMIDITY_VAL_INDEX, &senVal);//GetHumidity( &senVal );
+			if( senVal.errorCode == ERROR_OK )
+			{
+				if( senVal.convertedValue < GetParameterValue(RH_LOWER_ALARM_ON_LIMIT))
+				alarmOut.alarm.humidityLow = 1;
+				if( senVal.convertedValue > GetParameterValue(RH_UPPER_ALARM_ON_LIMIT))
+				alarmOut.alarm.humidityHigh = 1;
+				if( senVal.convertedValue > GetParameterValue(RH_LOWER_ALARM_OFF_LIMIT))
+				alarmOut.alarm.humidityLow = 0;
+				if( senVal.convertedValue < GetParameterValue(RH_UPPER_ALARM_OFF_LIMIT))
+				alarmOut.alarm.humidityHigh = 0;
+
+				ledState.led.humidityAlarm = alarmOut.alarm.humidityLow | alarmOut.alarm.humidityHigh;
+				ledState.led.humidityOk = ~alarmOut.alarm.humidityHigh;
+			}
+			else
+			{
+				ledState.led.humidityOk = ledState.led.humidityAlarm = 0;
+			}
+		}
+		else
+		{
+			ledState.led.humidityOk = ledState.led.humidityAlarm = 0;
+			alarmOut.alarm.humidityLow = 0;
+			alarmOut.alarm.humidityHigh = 0;
+		}
+			
+		if( IsSerialEnabled() && IsBroadcastEnabled() && oldAlarmOut.alarmByte != alarmOut.alarmByte )
+		{
+			oldAlarmOut.alarmByte ^= alarmOut.alarmByte;
+			if( oldAlarmOut.alarm.absPressHigh )
+			{  // Change in state
+				SerialPrintAlarm( ALARM_UPPER_DP1, alarmOut.alarm.absPressHigh );
+			}
+			if( oldAlarmOut.alarm.absPressLow )
+			{  // Change in state
+				SerialPrintAlarm( ALARM_LOWER_DP1, alarmOut.alarm.absPressLow );
+			}
+			if( oldAlarmOut.alarm.diffPressHigh )
+			{  // Change in state
+				SerialPrintAlarm( ALARM_UPPER_DP2, alarmOut.alarm.diffPressHigh );
+			}
+			if( oldAlarmOut.alarm.diffPressLow )
+			{  // Change in state
+				SerialPrintAlarm( ALARM_LOWER_DP2, alarmOut.alarm.diffPressLow );
+			}
+			if( oldAlarmOut.alarm.diffPress3High )
+			{  // Change in state
+				SerialPrintAlarm( ALARM_UPPER_DP3, alarmOut.alarm.diffPress3High );
+			}
+			if( oldAlarmOut.alarm.diffPress3Low )
+			{  // Change in state
+				SerialPrintAlarm( ALARM_LOWER_DP3, alarmOut.alarm.diffPress3Low );
+			}
+			if( oldAlarmOut.alarm.tempHigh )
+			{  // Change in state
+				SerialPrintAlarm( ALARM_UPPER_TEMPERATURE, alarmOut.alarm.tempHigh );
+			}
+			if( oldAlarmOut.alarm.tempLow )
+			{  // Change in state
+				SerialPrintAlarm( ALARM_LOWER_TEMPERATURE, alarmOut.alarm.tempLow );
+			}
+			if( oldAlarmOut.alarm.humidityHigh )
+			{  // Change in state
+				SerialPrintAlarm( ALARM_UPPER_HUMIDITY, alarmOut.alarm.humidityHigh );
+			}
+			if( oldAlarmOut.alarm.humidityLow )
+			{  // Change in state
+				SerialPrintAlarm( ALARM_LOWER_HUMIDITY, alarmOut.alarm.humidityLow );
+			}
+		}
+
+		//Set buzzer and relay out values based on alarm setup parameter
+		if( GetParameterValue(DP1_ALARM_SETUP) == ALARM_ENB_BUZ_ON )
+		{
+			buzzerOut.alarm.absPressHigh = alarmOut.alarm.absPressHigh;
+			buzzerOut.alarm.absPressLow = alarmOut.alarm.absPressLow;
+		}
+		else
+		{
+			buzzerOut.alarm.absPressHigh = 0;
+			buzzerOut.alarm.absPressLow = 0;
+		}
+		 
+		if( GetParameterValue(DP2_ALARM_SETUP) == ALARM_ENB_BUZ_ON )
+		{
+			buzzerOut.alarm.diffPressHigh = alarmOut.alarm.diffPressHigh;
+			buzzerOut.alarm.diffPressLow = alarmOut.alarm.diffPressLow;
+		}
+		else
+		{
+			buzzerOut.alarm.diffPressHigh = 0;
+			buzzerOut.alarm.diffPressLow = 0;
+		}
+			
+		if( GetParameterValue(DP3_ALARM_SETUP) == ALARM_ENB_BUZ_ON )
+		{
+			buzzerOut.alarm.diffPress3High = alarmOut.alarm.diffPress3High;
+			buzzerOut.alarm.diffPress3Low = alarmOut.alarm.diffPress3Low;
+		}
+		else
+		{
+			buzzerOut.alarm.diffPress3High = 0;
+			buzzerOut.alarm.diffPress3Low = 0;
+		}
+			
+		if( GetParameterValue(TEMP_ALARM_SETUP) == ALARM_ENB_BUZ_ON )
+		{
+			buzzerOut.alarm.tempHigh = alarmOut.alarm.tempHigh;
+			buzzerOut.alarm.tempLow = alarmOut.alarm.tempLow;
+		}
+		else
+		{
+			buzzerOut.alarm.tempHigh = 0;
+			buzzerOut.alarm.tempLow = 0;
+		}
+			
+		if( GetParameterValue(RH_ALARM_SETUP) == ALARM_ENB_BUZ_ON )
+		{
+			buzzerOut.alarm.humidityHigh = alarmOut.alarm.humidityHigh;
+			buzzerOut.alarm.humidityLow = alarmOut.alarm.humidityLow;
+		}
+		else
+		{
+			buzzerOut.alarm.humidityHigh = 0;
+			buzzerOut.alarm.humidityLow = 0;
+		}
+			
+		buzzerOut.alarm.fire = alarmOut.alarm.fire;
+		buzzerOut.alarm.door = alarmOut.alarm.door;
+	}
+
+	//LED_PORT = ~ledState.ledByte;
+	if(ledState.led.absPressOk) LED_ABD_PRES_OK_ON; else LED_ABD_PRES_OK_OFF;
+	if(ledState.led.absPressAlarm) LED_ABD_PRES_ALM_ON; else LED_ABD_PRES_ALM_OFF;
+	if(ledState.led.diffPressOk) LED_DP2_OK_ON; else LED_DP2_OK_OFF;
+	if(ledState.led.diffPressAlarm) LED_DP2_ALM_ON; else LED_DP2_ALM_OFF;
+	if(ledState.led.tempOk) LED_TEMP_OK_ON; else LED_TEMP_OK_OFF;
+	if(ledState.led.tempAlarm) LED_TEMP_ALM_ON; else LED_TEMP_ALM_OFF;
+	if(ledState.led.humidityOk) LED_HUM_OK_ON; else LED_HUM_OK_OFF;
+	if(ledState.led.humidityAlarm) LED_HUM_ALM_ON; else LED_HUM_ALM_OFF;
+
+	if (IsAlalogOutEnabled())
+	{
+		if( IsDP1Enabled() && (GetParameterValue(DP1_OUTPUT_TYPE) == 1 || IsPIDEnabled() == 0))
+		{
+			GetPareValue(DP1_VAL_INDEX, &senVal);//GetDP1( &senVal );
+			if( senVal.errorCode == ERROR_OK )
+			{
+				if( senVal.convertedValue <= GetParameterValue(DP1_OUT_LOW_PRES) )
+					value = GetParameterValue(DP1_OUT_LOW_COUNT);
+				else if( senVal.convertedValue >= GetParameterValue(DP1_OUT_HIGH_PRES) )
+					value = GetParameterValue(DP1_OUT_HIGH_COUNT);
+				else
+				{
+					value = GetParameterValue(DP1_OUT_HIGH_PRES) - GetParameterValue(DP1_OUT_LOW_PRES);
+					convertedValue = GetParameterValue(DP1_OUT_HIGH_COUNT) - GetParameterValue(DP1_OUT_LOW_COUNT);
+					value = (((unsigned long)(senVal.convertedValue - GetParameterValue(DP1_OUT_LOW_PRES))) * convertedValue) / value;
+					value += GetParameterValue(DP1_OUT_LOW_COUNT);
+				}
+					
+				if( ! GetParameterValue(DP1_OUT_POLARITY))
+				{
+					value -= GetParameterValue(DP1_OUT_LOW_COUNT);
+					value = GetParameterValue(DP1_OUT_HIGH_COUNT) - GetParameterValue(DP1_OUT_LOW_COUNT) - value;
+					value += GetParameterValue(DP1_OUT_LOW_COUNT);
+				}
+			}
+			else
+			{
+				// write zero
+				value = 0;
+			}
+				
+			// Write to DAC
+			convertedValue = DACWriteOutValue( DP1_ANALOG_OUT, value );
+			if( convertedValue != ERROR_OK )
+			systemError = convertedValue;
+		}
+			
+			
+		if( IsDP2Enabled() && (GetParameterValue(DP2_OUTPUT_TYPE) == 1 || IsPIDEnabled() == 0) )
+		{
+			GetPareValue(DP2_VAL_INDEX, &senVal);//GetDP2( &senVal );
+			if( senVal.errorCode == ERROR_OK )
+			{
+				if( senVal.convertedValue <= GetParameterValue(DP2_OUT_LOW_PRES) )
+					value = GetParameterValue(DP2_OUT_LOW_COUNT);
+				else if( senVal.convertedValue >= GetParameterValue(DP2_OUT_HIGH_PRES) )
+					value = GetParameterValue(DP2_OUT_HIGH_COUNT);
+				else
+				{
+					value = GetParameterValue(DP2_OUT_HIGH_PRES) - GetParameterValue(DP2_OUT_LOW_PRES);
+					convertedValue = GetParameterValue(DP2_OUT_HIGH_COUNT) - GetParameterValue(DP2_OUT_LOW_COUNT);
+					value = (((unsigned long)(senVal.convertedValue - GetParameterValue(DP2_OUT_LOW_PRES))) * convertedValue) / value;
+					value += GetParameterValue(DP2_OUT_LOW_COUNT);
+				}
+					
+				if( ! GetParameterValue(DP2_OUT_POLARITY))
+				{
+					value -= GetParameterValue(DP2_OUT_LOW_COUNT);
+					value = GetParameterValue(DP2_OUT_HIGH_COUNT) - GetParameterValue(DP2_OUT_LOW_COUNT) - value;
+					value += GetParameterValue(DP2_OUT_LOW_COUNT);
+				}
+			}
+			else
+			{
+				// write zero
+				value = 0;
+			}
+			// Write to DAC
+			convertedValue = DACWriteOutValue( DP2_ANALOG_OUT, value );
+			if( convertedValue != ERROR_OK )
+			systemError = convertedValue;
+		}
+ 
+		if (IsTemperatureEnabled() && (GetParameterValue(TEMP_OUTPUT_TYPE) == 1 || IsPIDEnabled() == 0))
+		{
+			GetPareValue(TEMPERATURE_VAL_INDEX, &senVal);//GetTemperature( &senVal );
+			if( senVal.errorCode == ERROR_OK )
+			{
+				if( senVal.convertedValue <= GetParameterValue(TEMP_OUT_LOW_TEMP) )
+					value = GetParameterValue(TEMP_OUT_LOW_COUNT);
+				else if( senVal.convertedValue >= GetParameterValue(TEMP_OUT_HIGH_TEMP) )
+					value = GetParameterValue(TEMP_OUT_HIGH_COUNT);
+				else
+				{
+					value = GetParameterValue(TEMP_OUT_HIGH_TEMP) - GetParameterValue(TEMP_OUT_LOW_TEMP);
+					convertedValue = GetParameterValue(TEMP_OUT_HIGH_COUNT) - GetParameterValue(TEMP_OUT_LOW_COUNT);
+					value = (((unsigned long)(senVal.convertedValue - GetParameterValue(TEMP_OUT_LOW_TEMP))) * convertedValue) / value;
+					value += GetParameterValue(TEMP_OUT_LOW_COUNT);
+				}
+					
+				if( ! GetParameterValue(TEMP_OUT_POLARITY))
+				{
+					value -= GetParameterValue(TEMP_OUT_LOW_COUNT);
+					value = GetParameterValue(TEMP_OUT_HIGH_COUNT) - GetParameterValue(TEMP_OUT_LOW_COUNT) - value;
+					value += GetParameterValue(TEMP_OUT_LOW_COUNT);
+				}
+			}
+			else
+			{
+				value = 0;
+			}
+			// Write to DAC
+			convertedValue = DACWriteOutValue( TEMP_ANALOG_OUT, value );
+			if( convertedValue != ERROR_OK )
+			{
+				systemError = convertedValue;
+			}
+		}
+
+		if (IsHumidityEnabled() && (GetParameterValue(RH_OUTPUT_TYPE) == 1 || IsPIDEnabled() == 0))
+		{
+			GetPareValue(HUMIDITY_VAL_INDEX, &senVal);//GetHumidity( &senVal );
+			if( senVal.errorCode == ERROR_OK )
+			{
+				if( senVal.convertedValue <= GetParameterValue(RH_OUT_LOW_RH) )
+					value = GetParameterValue(RH_OUT_LOW_COUNT);
+				else if( senVal.convertedValue >= GetParameterValue(RH_OUT_HIGH_RH) )
+					value = GetParameterValue(RH_OUT_HIGH_COUNT);
+				else
+				{
+					value = GetParameterValue(RH_OUT_HIGH_RH) - GetParameterValue(RH_OUT_LOW_RH);
+					convertedValue = GetParameterValue(RH_OUT_HIGH_COUNT) - GetParameterValue(RH_OUT_LOW_COUNT);
+					value = (((unsigned long)(senVal.convertedValue - GetParameterValue(RH_OUT_LOW_RH))) * convertedValue) / value;
+					value += GetParameterValue(RH_OUT_LOW_COUNT);
+				}
+				
+				if( ! GetParameterValue(RH_OUT_POLARITY))
+				{
+					value -= GetParameterValue(RH_OUT_LOW_COUNT);
+					value = GetParameterValue(RH_OUT_HIGH_COUNT) - GetParameterValue(RH_OUT_LOW_COUNT) - value;
+					value += GetParameterValue(RH_OUT_LOW_COUNT);
+				}
+			}
+			else
+			{
+				// write zero
+				value = 0;
+			}
+			// Write to DAC
+			convertedValue = DACWriteOutValue( RH_ANALOG_OUT, value );
+			if( convertedValue != ERROR_OK )
+			systemError = convertedValue;
+		}
+	}
+		
+	DoIOPortMapping();
+
+	//OSSleep( 100 );
+}
+//#pragma GCC pop_options
+
+static void DoIOPortMapping()
+{
+   if(alarmOut.alarm.fire==1) return;
+   //if(alarmOut.alarm.door==1) return;
+	
+   uint8_t inputs = INPUT_PORT_IN & 0x1F;
+   if(DOOR_SENSE) inputs |= PIN5_bm;
+
+   int mapping, pol = 0;
+   
+   //mapping = GetParameterValue(OUTPUT1_MAPPING);
+   //if( mapping )
+   //{
+      //mapping = mapping - 1;  // Normalize to 0 numbering from 1
+      //pol = mapping % 2;  // Last bet as polarity, pol = 0 for normal, 1 for reverse polarity
+      //mapping /= 2;  // Discard last bit
+	  //mapping = 0x1 << mapping;   // generate mask to read input
+      //pol = pol * mapping;  // Set polarity mask
+	  //if(( inputs ^ pol ) & mapping )  // Normalize input based on output polarity
+	     //OUTPUT1_HIGH;
+      //else
+         //OUTPUT1_LOW;
+   //}
+   mapping = GetParameterValue(OUTPUT2_MAPPING);
+   if( mapping )
+   {
+      mapping = mapping - 1;  // Normalize to 0 numbering from 1
+      pol = mapping % 2;  // Last bet as polarity, pol = 0 for normal, 1 for reverse polarity
+      mapping /= 2;  // Discard last bit
+	  mapping = 0x1 << mapping;   // generate mask to read input
+      pol = pol * mapping;  // Set polarity mask
+	  if(( inputs ^ pol ) & mapping )  // Normalize input based on output polarity
+	     OUTPUT2_HIGH; 
+      else
+         OUTPUT2_LOW;
+   }
+   mapping = GetParameterValue(OUTPUT3_MAPPING);
+   if( mapping )
+   {
+      mapping = mapping - 1;  // Normalize to 0 numbering from 1
+      pol = mapping % 2;  // Last bet as polarity, pol = 0 for normal, 1 for reverse polarity
+      mapping /= 2;  // Discard last bit
+	  mapping = 0x1 << mapping;   // generate mask to read input
+      pol = pol * mapping;  // Set polarity mask
+	  if(( inputs ^ pol ) & mapping )  // Normalize input based on output polarity
+	     OUTPUT3_HIGH; 
+      else
+         OUTPUT3_LOW;
+   }
+   mapping = GetParameterValue(OUTPUT4_MAPPING);
+   if( mapping )
+   {
+      mapping = mapping - 1;  // Normalize to 0 numbering from 1
+      pol = mapping % 2;  // Last bet as polarity, pol = 0 for normal, 1 for reverse polarity
+      mapping /= 2;  // Discard last bit
+	  mapping = 0x1 << mapping;   // generate mask to read input
+      pol = pol * mapping;  // Set polarity mask
+	  if(( inputs ^ pol ) & mapping )  // Normalize input based on output polarity
+	     OUTPUT4_HIGH;  
+      else
+         OUTPUT4_LOW;
+   }
+}
+
+
+void SetOutput( uint8_t outValue, uint8_t * retVal )
+{
+   int mapping;
+
+   //mapping = GetParameterValue(OUTPUT1_MAPPING);
+   //if( !mapping )
+   //{
+	  //if( outValue & 0x1 )
+	     //OUTPUT1_HIGH;
+	  //else
+	     //OUTPUT1_LOW;
+   //}
+   mapping = GetParameterValue(OUTPUT2_MAPPING);
+   if( !mapping )
+   {
+	  if( outValue & 0x2 )
+	     OUTPUT2_HIGH;
+	  else
+	     OUTPUT2_LOW;
+   }
+   mapping = GetParameterValue(OUTPUT3_MAPPING);
+   if( !mapping )
+   {
+	  if( outValue & 0x4 )
+	     OUTPUT3_HIGH;
+	  else
+	     OUTPUT3_LOW;
+   }
+   mapping = GetParameterValue(OUTPUT4_MAPPING);
+   if( !mapping )
+   {
+	  if( outValue & 0x8 )
+	     OUTPUT4_HIGH;
+	  else
+	     OUTPUT4_LOW;
+   }
+   *retVal = (OUTPUT_PORT & 0x0F); 
+}
+
+void GetOutput( uint8_t * retVal )
+{
+   *retVal = (OUTPUT_PORT & 0x0F); 
+}
+
+void GetInput( uint8_t * retVal )
+{
+	uint8_t inputs = INPUT_PORT_IN & 0x1F;
+	if(DOOR_SENSE) inputs |= PIN5_bm;
+	
+   *retVal = inputs; 
+}
+
+/*
+   TempRH IO Task
+ */
+
+//static OSSemaMutex TempRHMutex;
+
+uint16_t tempDelay = 1000;
+
+void TEMPRHIO_FUNC_NAME( void )
+{
+	uint8_t retVal = -1, checkSum;
+	unsigned int value, value1;
+	int convertedValue;
+
+	/*if(CurrentDoorStatus()==OPEN)
+	{
+		alarmOut.alarm.door=1;
+	}
+	else
+	{
+		alarmOut.alarm.door=0;
+	}*/
+		
+	if( GetParameterValue(TEMP_RH_SENS_TYPE) == TEMP_RH_SENS_SHT25 )
+	{
+		if (IsTemperatureEnabled())
+		{   
+			retVal = GetSensorSHT25Temperature(0, &value, &checkSum );
+			
+			// Convert the value to unit
+			if ( retVal == ERROR_OK )
+			{
+				convertedValue = value + GetParameterValue(TEMP_ZERO_ADJ);
+			}
+			else
+			{
+				value = convertedValue = 0;
+			}
+			AveragePara(TEMPERATURE_VAL_INDEX, retVal, value, convertedValue );
+		}
+
+		if (IsHumidityEnabled())
+		{  
+			retVal = GetSensorSHT25Humidity(0, &value, &checkSum );
+			
+			// Convert the value to unit
+			if ( retVal == ERROR_OK )
+			{
+				convertedValue = value + GetParameterValue(RH_ZERO_ADJ);
+			}
+			else
+			{
+				value = convertedValue = 0;
+			}
+			AveragePara(HUMIDITY_VAL_INDEX, retVal, value, convertedValue );
+		}
+	}
+	else if( GetParameterValue(TEMP_RH_SENS_TYPE) == TEMP_RH_SENS_IDT_HS3100 )
+	{
+		if(IsTemperatureEnabled() || IsHumidityEnabled())
+		{
+			StartSensor_IDT_HS3100(0);
+				
+			_delay_ms(500);
+			
+			retVal = GetSensorReadings_IDT_HS3100(0, &value, &value1 );
+		}  
+
+		if(IsTemperatureEnabled())
+		{   /* Timer * 4 */
+			if ( retVal == ERROR_OK )
+			{
+				convertedValue = (value * 16500l / 0x3FFF) - 4000 + GetParameterValue(TEMP_ZERO_ADJ);    /* degree C */
+			}
+			else
+			{
+				value = convertedValue = 0;
+			}
+			AveragePara(TEMPERATURE_VAL_INDEX, retVal, value, convertedValue );
+		}
+		
+		if (IsHumidityEnabled())
+		{  /* Timer * 3 */
+			// Convert the value to unit
+			if ( retVal == ERROR_OK )
+			{
+				convertedValue = (value1 * 10000l / 0x3FFF) + GetParameterValue(RH_ZERO_ADJ); 
+			}
+			else
+			{
+				value1 = convertedValue = 0;
+			}
+			
+			AveragePara(HUMIDITY_VAL_INDEX, retVal, value1, convertedValue );
+		}
+	}
+	//====================================================================================================
+	if( GetParameterValue(TEMP_RH2_SENS_TYPE) == TEMP_RH_SENS_SHT25 )
+	{
+		if(IsTemperature2Enabled())
+		{
+			//----------------------------------------------------------------------
+			retVal = GetSensorSHT25Temperature(1, &value, &checkSum );
+				
+			// Convert the value to unit
+			if ( retVal == ERROR_OK )
+			{
+				convertedValue = value + GetParameterValue(TEMP2_ZERO_ADJ);
+			}
+			else
+			{
+				value = convertedValue = 0;
+			}
+			AveragePara(TEMPERATURE2_VAL_INDEX, retVal, value, convertedValue );
+	
+			retVal = GetSensorSHT25Humidity(1, &value, &checkSum );
+				
+			// Convert the value to unit
+			if ( retVal == ERROR_OK )
+			{
+				convertedValue = value + GetParameterValue(RH2_ZERO_ADJ);
+			}
+			else
+			{
+				value = convertedValue = 0;
+			}
+			AveragePara(HUMIDITY2_VAL_INDEX, retVal, value, convertedValue );
+		}
+	}
+	else if( GetParameterValue(TEMP_RH2_SENS_TYPE) == TEMP_RH_SENS_IDT_HS3100 )
+	{
+		if(IsTemperature2Enabled())
+		{
+			StartSensor_IDT_HS3100(1);
+				
+			_delay_ms(500);
+				
+			retVal = GetSensorReadings_IDT_HS3100(1, &value, &value1 );
+
+			if ( retVal == ERROR_OK )
+			{
+				convertedValue = (value * 16500l / 0x3FFF) - 4000 + GetParameterValue(TEMP2_ZERO_ADJ);    /* degree C */
+			}
+			else
+			{
+				value = convertedValue = 0;
+			}
+			AveragePara(TEMPERATURE2_VAL_INDEX, retVal, value, convertedValue );
+	
+			// Convert the value to unit
+			if ( retVal == ERROR_OK )
+			{
+				convertedValue = (value1 * 10000l / 0x3FFF) + GetParameterValue(RH2_ZERO_ADJ);
+			}
+			else
+			{
+				value1 = convertedValue = 0;
+			}
+				
+			AveragePara(HUMIDITY2_VAL_INDEX, retVal, value1, convertedValue );
+		}
+	}
+
+	//OSSleep(250);
+}
+
+static void AveragePara( uint8_t SenNo, uint8_t error, unsigned int rawVal, int convertedVal )
+{
+	convertedVal = Kalman_Update(&Kalmanfilter[SenNo], convertedVal);
+	//OSSemaTakeEver(DeviceValueMutex);
+	sensorVal[SenNo].errorCode = error;
+	sensorVal[SenNo].rawValue = rawVal;
+	sensorVal[SenNo].convertedValue = convertedVal;
+	//OSSemaGive(DeviceValueMutex);
+}
+
+static int isBuzzerSuppressionReq = FALSE;			
+
+void GetPareValue(uint8_t ParaNumber, SENSOR_VALUE * value )
+{
+	//OSSemaTakeEver(DeviceValueMutex);
+	value->errorCode = sensorVal[ParaNumber].errorCode;
+	value->rawValue = sensorVal[ParaNumber].rawValue;
+	value->convertedValue = sensorVal[ParaNumber].convertedValue;
+
+	if(ParaNumber==HUMIDITY_VAL_INDEX)
+	{
+		if(value->convertedValue>10000) value->convertedValue = 10000;
+	}
+	//OSSemaGive(DeviceValueMutex);
+}
+
+uint8_t GetSystemError()
+{
+   return systemError;
+}
+
+uint16_t GetAlarms()
+{
+   return alarmOut.alarmByte;
+}
+
+unsigned int AlarmActive_Buzzer()
+{
+   return buzzerOut.alarmByte;
+}
+
+
+void SetBuzzerSuppressionReq()
+{
+   isBuzzerSuppressionReq = TRUE;
+}
+
+int GetAndResetBuzzerSuppressionReq()
+{
+   if( isBuzzerSuppressionReq )
+   {
+      isBuzzerSuppressionReq = FALSE;
+	  return TRUE;
+   }
+   return FALSE;
+}
+
+void DeviceIOInit()
+{
+   uint8_t i;
+
+   for( i = 0; i < sizeof(sensorVal)/sizeof(sensorVal[0]); i++ )
+   {
+       sensorVal[i].errorCode = -1;
+       sensorVal[i].rawValue = -1;
+       sensorVal[i].convertedValue = -1;
+   }
+
+   //OSSemaCreateMutex( DeviceValueMutex );
+   //OSSemaGive(DeviceValueMutex);
+
+   /* Spawn the producer and consumer. */
+   //xTaskCreate( DEVICEIO_FUNC_NAME, "DIO", DEVICEIO_STACK_SIZE, ( void * ) 0, DEVICEIO_PRIORITY, NULL );
+   //xTaskCreate( TEMPRHIO_FUNC_NAME, "TIO", TEMPRHIO_STACK_SIZE, ( void * ) 0, TEMPRHIO_PRIORITY, NULL );
+   
+   ledState.ledByte = 0;
+   oldAlarmOut.alarmByte = alarmOut.alarmByte = 0;
+   LED_ABD_PRES_OK_DIR_OUT;
+   LED_ABD_PRES_ALM_DIR_OUT;
+   LED_DP2_OK_DIR_OUT;
+   LED_DP2_ALM_DIR_OUT;
+   LED_TEMP_OK_DIR_OUT;
+   LED_TEMP_ALM_DIR_OUT;
+   LED_HUM_OK_DIR_OUT;
+   LED_HUM_ALM_DIR_OUT;
+   
+   OUTPUT_PORT_DIR = 0xFF;  // As outputs
+   
+   uint16_t Output;
+   
+   Output = OSReadEEPromWord((unsigned int *)EA_OUTPUT);
+   if(Output > 0x0F)
+   {
+	   
+   }
+   else
+   {
+	   SetOutput( (uint8_t)Output, (uint8_t*)&Output );
+   }
+   
+   //OUTPUT_PORT = 0xE0;      // set high
+
+   INPUT_PORT_DIR = 0xE0;  // As inputs
+   INPUT_PORT = 0xFF;      // Pullups on
+   
+   // Kalman filter for pressure
+   Kalman_Init(&Kalmanfilter[DP1_VAL_INDEX], 0.01, 0.1, 0.0);  // Initialize with default values
+   Kalman_Init(&Kalmanfilter[DP2_VAL_INDEX], 0.01, 0.1, 0.0);  // Initialize with default values
+   Kalman_Init(&Kalmanfilter[DP3_VAL_INDEX], 0.01, 0.1, 0.0);  // Initialize with default values
+   Kalman_Init(&Kalmanfilter[TEMPERATURE_VAL_INDEX], 0.01, 0.1, 0.0);  // Initialize with default values
+   Kalman_Init(&Kalmanfilter[HUMIDITY_VAL_INDEX], 0.01, 0.1, 0.0);  // Initialize with default values
+   Kalman_Init(&Kalmanfilter[TEMPERATURE2_VAL_INDEX], 0.01, 0.1, 0.0);  // Initialize with default values
+   Kalman_Init(&Kalmanfilter[HUMIDITY2_VAL_INDEX], 0.01, 0.1, 0.0);  // Initialize with default values
+}
+
+uint8_t CurrentDoorStatus(void)
+{
+	if(DOOR_SENSE)
+	{
+		return OPEN;
+	}
+	else
+	{
+		return CLOSE;
+	}
+}
+
+
+
