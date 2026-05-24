@@ -82,6 +82,8 @@ static SENSOR_VALUE senVal;
    Device IO Task
 */
 
+#define DP_SW_FACT_DIVISION		10
+
 void DEVICEIO_FUNC_NAME( void )
 {
 	uint8_t retVal;
@@ -89,7 +91,9 @@ void DEVICEIO_FUNC_NAME( void )
 	int value;//, temprValue;
 	int convertedValue;
 	static uint16_t TempfireAlmTimer=0,TempAlmTimer=0;
-	
+	static uint8_t gu8_dp_sw_factor_add_cnt[3]={0};
+	static int16_t su16_dpAlmdiff[3]={0},su16_convertedValue[3]={0};
+		
 	systemError = ERROR_OK;
 
 	if (IsDP1Enabled())
@@ -99,6 +103,31 @@ void DEVICEIO_FUNC_NAME( void )
 		// Convert the value to PSI
 		convertedValue = value + GetParameterValue(DP1_ZERO_ADJ);
 		AveragePara(DP1_VAL_INDEX, retVal, value, convertedValue );
+		
+		su16_dpAlmdiff[0] = GetParameterValue(DP1_UPPER_ALARM_OFF_LIMIT) - GetParameterValue(DP1_LOWER_ALARM_ON_LIMIT);
+			
+		//if(b.dp_sw_factor_add1)
+		{
+			if(convertedValue < GetParameterValue(DP1_LOWER_ALARM_ON_LIMIT))
+			{
+				if(gu8_dp_sw_factor_add_cnt[0]<DP_SW_FACT_DIVISION)
+				{
+					su16_convertedValue[0] += (su16_dpAlmdiff[0]/DP_SW_FACT_DIVISION);
+					gu8_dp_sw_factor_add_cnt[0]++;
+				}
+			}
+			else
+			{
+				if(gu8_dp_sw_factor_add_cnt[0])
+				{
+					su16_convertedValue[0] -= (su16_dpAlmdiff[0]/DP_SW_FACT_DIVISION);
+					gu8_dp_sw_factor_add_cnt[0]--;
+				}
+			}
+				
+			//b.dp_sw_factor_add1 = 0;
+		}
+		convertedValue += su16_convertedValue[0];
 	}
 		
 	if (IsDP2Enabled())
@@ -108,6 +137,31 @@ void DEVICEIO_FUNC_NAME( void )
 		// Convert the value to PSI
 		convertedValue = value + GetParameterValue(DP2_ZERO_ADJ);
 		AveragePara(DP2_VAL_INDEX, retVal, value, convertedValue );
+		
+		su16_dpAlmdiff[1] = GetParameterValue(DP2_UPPER_ALARM_OFF_LIMIT) - GetParameterValue(DP2_LOWER_ALARM_ON_LIMIT);
+			
+		//if(b.dp_sw_factor_add1)
+		{
+			if(convertedValue < GetParameterValue(DP2_LOWER_ALARM_ON_LIMIT))
+			{
+				if(gu8_dp_sw_factor_add_cnt[1]<DP_SW_FACT_DIVISION)
+				{
+					su16_convertedValue[1] += (su16_dpAlmdiff[1]/DP_SW_FACT_DIVISION);
+					gu8_dp_sw_factor_add_cnt[1]++;
+				}
+			}
+			else
+			{
+				if(gu8_dp_sw_factor_add_cnt[1])
+				{
+					su16_convertedValue[1] -= (su16_dpAlmdiff[1]/DP_SW_FACT_DIVISION);
+					gu8_dp_sw_factor_add_cnt[1]--;
+				}
+			}
+				
+			//b.dp_sw_factor_add1 = 0;
+		}
+		convertedValue += su16_convertedValue[1];
 	}
 	  
 	if (IsDP3Enabled())
@@ -117,6 +171,31 @@ void DEVICEIO_FUNC_NAME( void )
 		// Convert the value to PSI
 		convertedValue = value + GetParameterValue(DP3_ZERO_ADJ);		
 		AveragePara(DP3_VAL_INDEX, retVal, value, convertedValue );
+		
+		su16_dpAlmdiff[2] = GetParameterValue(DP3_UPPER_ALARM_OFF_LIMIT) - GetParameterValue(DP3_LOWER_ALARM_ON_LIMIT);
+		
+		//if(b.dp_sw_factor_add1)
+		{
+			if(convertedValue < GetParameterValue(DP3_LOWER_ALARM_ON_LIMIT))
+			{
+				if(gu8_dp_sw_factor_add_cnt[2]<DP_SW_FACT_DIVISION)
+				{
+					su16_convertedValue[2] += (su16_dpAlmdiff[2]/DP_SW_FACT_DIVISION);
+					gu8_dp_sw_factor_add_cnt[2]++;
+				}
+			}
+			else
+			{
+				if(gu8_dp_sw_factor_add_cnt[2])
+				{
+					su16_convertedValue[2] -= (su16_dpAlmdiff[2]/DP_SW_FACT_DIVISION);
+					gu8_dp_sw_factor_add_cnt[2]--;
+				}
+			}
+			
+			//b.dp_sw_factor_add1 = 0;
+		}
+		convertedValue += su16_convertedValue[2];
 	}
 		
 	oldAlarmOut.alarmByte = alarmOut.alarmByte;
@@ -125,6 +204,7 @@ void DEVICEIO_FUNC_NAME( void )
 		if( IsDP1Enabled() && GetParameterValue(DP1_ALARM_SETUP) != ALARM_DISABLED)
 		{
 			GetPareValue(DP1_VAL_INDEX, &senVal);//GetDP1( &senVal );
+			
 			if( senVal.errorCode == ERROR_OK )
 			{
 				if( senVal.convertedValue < GetParameterValue(DP1_LOWER_ALARM_ON_LIMIT))

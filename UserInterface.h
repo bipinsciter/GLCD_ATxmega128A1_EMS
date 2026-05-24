@@ -360,6 +360,7 @@ typedef enum
 	TEMP_DIFF_ALARM_LIMIT			= 181,
 	RH2_ZERO_ADJ                     = 182,
 	TEMP_RH2_SENS_TYPE               = 183,
+	ROOM_ID							 = 184,
 	
 }PARAMETER;
 

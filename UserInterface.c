@@ -668,6 +668,7 @@ static char * HumidityOutPolarityPara( uint8_t operationType, int16_t * paraValu
 static char * TempRHSensTypePara( uint8_t operationType, int16_t * paraValue );
 static char * TempRH2SensTypePara( uint8_t operationType, int16_t * paraValue );
 //static char * ParticalAlarmSetupPara( uint8_t operationType, int16_t * paraValue );
+static char * ROOMIdPara(uint8_t operationType, int16_t * paraValue );
 static char * AHUIdPara(uint8_t operationType, int16_t * paraValue );
 static char * AHUCFMPara(uint8_t operationType, int16_t * paraValue );
 static char * AHUArea1Para(uint8_t operationType, int16_t * paraValue );
@@ -1270,11 +1271,30 @@ void DisplaySensorValues(void)
 		//PrintLineInBox(LEFT,100,100,120,FormatInteger (GetParameterValue( AHU_ID )));
 
 		ks0xxx_SelectFont(Bodoni15, ks0xxx_ReadFontData, BLACK);
-		sprintf(displayStr1,"ID:%s",FormatInteger (GetParameterValue( DEVICE_ID )));
-		PrintLineInBox(LEFT,5,120,120,displayStr1);
+		sprintf(displayStr1,"AHU:%s",FormatInteger (GetParameterValue( AHU_ID )));
+		PrintLineInBox(LEFT,5,120,130,displayStr1);
 		
-		sprintf(displayStr1,"ROOM:%s",FormatInteger (GetParameterValue( AHU_ID )));
-		PrintLineInBox(LEFT,50,120,120,displayStr1);
+		sprintf(displayStr1,"ROOM:%s",FormatInteger (GetParameterValue( ROOM_ID )));
+		PrintLineInBox(LEFT,70,120,130,displayStr1);
+		
+		sprintf(displayStr1,"ID:%s",FormatInteger (GetParameterValue( DEVICE_ID )));
+		PrintLineInBox(LEFT,5,120,116,displayStr1);
+		
+		
+		//sprintf(displayStr1,"ID:%s",FormatInteger (GetParameterValue( DEVICE_ID )));
+		//PrintLineInBox(LEFT,5,120,116,displayStr1);
+		//
+		//sprintf(displayStr1,"ROOM:%s",FormatInteger (GetParameterValue( ROOM_ID )));
+		//PrintLineInBox(LEFT,50,120,116,displayStr1);
+		//
+		//sprintf(displayStr1,"AHU:%s",FormatInteger (GetParameterValue( AHU_ID )));
+		//PrintLineInBox(LEFT,50,120,130,displayStr1);
+		
+		//sprintf(displayStr1,"AHU");
+		//PrintLineInBox(LEFT,105,140,0,displayStr1);
+		//
+		//sprintf(displayStr1,"%s",FormatInteger (GetParameterValue( AHU_ID )));
+		//PrintLineInBox(LEFT,105,140,16,displayStr1);
 		
 		sprintf(displayStr1,"%s  ",(CurrentDoorStatus()==OPEN)?"OPEN":"CLOSE");
 		PrintLineInBox(LEFT,90,140,144,displayStr1);
@@ -1608,7 +1628,7 @@ char DisplayDP1(uint8_t error, int16_t value)
 		
 		sprintf(&displayStr1[length],"H%s",formatedValue);
 		
-		PrintLineInBox(LEFT,25,135,100,displayStr1);
+		PrintLineInBox(LEFT,25,135,90,displayStr1);
 		
 		//OSSemaGive(UIMutex);
 	}
@@ -2446,6 +2466,7 @@ const PARA_INFO paraTableLCD [] PROGMEM =
 	{ SERIAL_DATA_STOP_PARITY_VAL,      IsMasterReset,      IsSerialEnabled,        "Ser D:St:Par Bits",  SerialDataStopParityPara },
 		
 	{ AHU_ID,                     NULL,                       NULL,           "AHU ID",            AHUIdPara },	
+	{ ROOM_ID,                     NULL,                       NULL,           "ROOM ID",            ROOMIdPara },
 	
 	{ DP1_RANGE,                   IsMasterReset,      IsDP1Enabled, "DP1SenRng(Pa)",   PresAbsRange  },
 	{ DP2_RANGE,                  IsMasterReset,      IsDP2Enabled,   "DP2SenRng(Pa)",     PresDiffRange  },
@@ -4056,6 +4077,11 @@ static char * SystemConfigPara(uint8_t operationType, int16_t * paraValue )
 //{
 //   return ParaSetIntegerVal( operationType, paraValue, EA_LOGGING_INTERVAL, D_LOGGING_INTERVAL, MIN_LOGGING_INTERVAL, MAX_LOGGING_INTERVAL );
 //}
+
+static char * ROOMIdPara(uint8_t operationType, int16_t * paraValue )
+{
+	return ParaSetIntegerVal1( operationType, paraValue, EA_ROOM_ID, 0, 0, 1000 );
+}
 
 static char * AHUIdPara(uint8_t operationType, int16_t * paraValue )
 {

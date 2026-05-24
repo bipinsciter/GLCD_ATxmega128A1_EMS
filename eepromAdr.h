@@ -179,6 +179,7 @@
 #define EA_CONFIG_SYSTEM         		         (301*2)
 #define EA_CUSTOMER_ID                           (302*2)
 #define EA_SERIAL_NO                             (303*2)
+#define EA_ROOM_ID								 (304*2)
 
 #endif
 
