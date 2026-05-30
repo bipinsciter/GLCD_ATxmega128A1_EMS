@@ -48,7 +48,7 @@
 #include "rtc.h" 
 #include "pid.h"
 
-#define SOFTWARE_VERSION                     207
+#define SOFTWARE_VERSION                     208
 
 #define TRUE 1
 #define FALSE 0
@@ -95,7 +95,8 @@
 #define D_DP2_RANGE						1220
 #define D_DP3_RANGE						1220
               
-#define D_BROADCAST_INTERVAL            120              
+#define D_BROADCAST_INTERVAL            120   
+#define D_BROADCAST_PORT	            0           
 #define D_DISPLAY_INTERVAL              1
 #define D_SERIAL_BAUD_RATE_VAL          SERIAL_BAUD_57600
 #define D_SERIAL_DATA_STOP_PARITY_VAL   ((3<<SERIAL_DATA_BITS_SHIFT) | (0<<SERIAL_STOP_BIT_SHIFT) | (SERIAL_PARITY_NONE << SERIAL_PARITY_SHIFT))//3    // BIT 0-1 = Data bits, BIT 2 = STOP bits, BIT 3-4 = PARITY :: 8 bit, 1 stop, no parity
@@ -158,6 +159,7 @@
 #define MIN_LOGGING_INTERVAL                  60   
 #define MIN_DEVICE_ID                         0    
 #define MIN_BROADCAST_INTERVAL                3    
+#define MIN_BROADCAST_PORT					  0
 #define MIN_DISPLAY_INTERVAL                  1             
 #define MIN_SERIAL_BAUD_RATE_VAL              0
 #define MIN_SERIAL_DATA_STOP_PARITY_VAL       0
@@ -210,6 +212,7 @@
 #define MAX_LOGGING_INTERVAL                  32767
 #define MAX_DEVICE_ID                         250
 #define MAX_BROADCAST_INTERVAL                32767
+#define MAX_BROADCAST_PORT		              2
 #define MAX_DISPLAY_INTERVAL                  30
 #define MAX_SERIAL_BAUD_RATE_VAL              8
 #define MAX_SERIAL_DATA_STOP_PARITY_VAL       23
@@ -623,6 +626,7 @@ static char * ConfigPasswordPara(uint8_t operationType, int16_t * paraValue );
 //static char * LogggingIntervalPara(uint8_t operationType, int16_t * paraValue );
 static char * DeviceIdPara(uint8_t operationType, int16_t * paraValue );
 static char * BroadcastIntervalPara(uint8_t operationType, int16_t * paraValue );
+static char * BroadcastPortPara(uint8_t operationType, int16_t * paraValue );
 static char * SerialBaudratePara(uint8_t operationType, int16_t * paraValue );
 static char * SerialDataStopParityPara(uint8_t operationType, int16_t * paraValue );
 static char * PresAbsRange(uint8_t operationType, int16_t * paraValue );
@@ -2449,6 +2453,7 @@ const PARA_INFO paraTableLCD [] PROGMEM =
 	{ DATE_DAY,                         IsRTCEnabled,       NULL,                   "Date: Day",          DateDayPara  },
 	
 	{ BROADCAST_INTERVAL,               IsSerialEnabled,    IsBroadcastEnabled,     "BroadcastInterval", BroadcastIntervalPara  },
+	{ BROADCAST_PORT,               IsSerialEnabled,    IsBroadcastEnabled,     "Broadcast Port", BroadcastPortPara  },
 		
 	{ BUZZER_ON_TIME,                   IsAlarmEnabled,             NULL,           "BuzzerONTime",     BuzzerOnPara },
 	{ BUZZER_OFF_TIME,                  IsAlarmEnabled,             NULL,           "BuzzerOFFTime",    BuzzerOffPara },     
@@ -4116,6 +4121,26 @@ static char * DeviceIdPara(uint8_t operationType, int16_t * paraValue )
 static char * BroadcastIntervalPara(uint8_t operationType, int16_t * paraValue )
 {
    return ParaSetIntegerVal( operationType, paraValue, EA_BROADCAST_INTERVAL, D_BROADCAST_INTERVAL, MIN_BROADCAST_INTERVAL, MAX_BROADCAST_INTERVAL );
+}
+
+static char * BroadcastPortPara(uint8_t operationType, int16_t * paraValue )
+{
+	ParameterOperationsSettingsRollover( operationType, paraValue, EA_BROADCAST_PORT, D_BROADCAST_PORT, MIN_BROADCAST_PORT, MAX_BROADCAST_PORT );
+
+	if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
+	return NULL;
+	if (IsLCDDisplay())
+	{
+		if( *paraValue == 0 )
+		locked_sprintf_P( displayStr, PSTR("Wifi"));
+		else if( *paraValue == 1 )
+		locked_sprintf_P( displayStr, PSTR("Zigbee"));
+		else if( *paraValue == 2 )
+		locked_sprintf_P( displayStr, PSTR("Both"));
+		else
+		locked_sprintf_P( displayStr, PSTR("Unknown"));
+	}
+	return displayStr;
 }
 
 static char * AbsPresZeroRangePara(uint8_t operationType, int16_t * paraValue )

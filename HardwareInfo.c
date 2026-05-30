@@ -12,14 +12,17 @@
 #define DIFF_PRESSURE2_ENB	  (1<<1)
 #define TEMPARATURE_ENB      (1<<2)
 #define HUMIDITY_ENB         (1<<3)
+
 #define LCD_DISPLAY_ENB      (1<<4)
 #define ALARM_ENB            (1<<5)
 #define ANALOGOUT_ENB        (1<<6)
 #define LOG_ENB              (1<<7)
+
 #define SERIAL_HANDSHACK_ENB (1<<8)
 #define WIRELESS_BRDCST_ENB  (1<<9)
 #define SERIAL_PRINTER_ENB   (1<<10)
 #define PID_ENB				 (1<<11)
+
 #define PRES_SENS_TEMP_ENB	 (1<<12)
 #define DIFF_PRESSURE3_ENB	 (1<<13)
 #define POST_TEMPARATURE_ENB (1<<14)
@@ -111,8 +114,6 @@ unsigned char IsWirelessBroadcastEnabled()
 
 unsigned char IsSerialPrinterEnabled()
 {
-   //return FALSE;
-
    return ((~OSReadEEPromWord((unsigned int *)EA_CONFIG_SYSTEM)) & SERIAL_PRINTER_ENB )? 1: 0;
 }
 

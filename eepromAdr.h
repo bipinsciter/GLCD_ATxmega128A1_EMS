@@ -180,6 +180,7 @@
 #define EA_CUSTOMER_ID                           (302*2)
 #define EA_SERIAL_NO                             (303*2)
 #define EA_ROOM_ID								 (304*2)
+#define EA_BROADCAST_PORT	                     (305*2) 
 
 #endif
 

@@ -377,29 +377,30 @@ void SetDefault(void)
 {	
 	if(eeprom_read_word((unsigned int *)EA_DEFAULT_SAVE)!=0xABCD)
 	{
-		OSWriteEEPromWord((unsigned int *)EA_CONFIG_SYSTEM, ~317);	//27007 //10623 //2429
-
-		memset(&gu8_inOutput[0][0],0,160);
-		//Input ----------------------------------
-		strcpy(&gu8_inOutput[0][0],"MANUAL");
-		strcpy(&gu8_inOutput[1][0],"AUTO");
-		strcpy(&gu8_inOutput[2][0],"ON");
-		strcpy(&gu8_inOutput[3][0],"OFF");
-		strcpy(&gu8_inOutput[4][0],"MANUAL");
-		strcpy(&gu8_inOutput[5][0],"VFD");
-		strcpy(&gu8_inOutput[6][0],"MANUAL");
-		strcpy(&gu8_inOutput[7][0],"AUTO");
-		//Output ----------------------------------
-		strcpy(&gu8_inOutput[8][0],"MANUAL");
-		strcpy(&gu8_inOutput[9][0],"AUTO");
-		strcpy(&gu8_inOutput[10][0],"MANUAL");
-		strcpy(&gu8_inOutput[11][0],"AUTO");
-		strcpy(&gu8_inOutput[12][0],"MANUAL");
-		strcpy(&gu8_inOutput[13][0],"AUTO");
-		strcpy(&gu8_inOutput[14][0],"MANUAL");
-		strcpy(&gu8_inOutput[15][0],"AUTO");
-		
-		OSWriteEEPromBlock((uint8_t*)EA_IP1_HIGH_NAME,(uint8_t*)&gu8_inOutput[0][0],160);
+		//OSWriteEEPromWord((unsigned int *)EA_CONFIG_SYSTEM, ~317);	
+		OSWriteEEPromWord((unsigned int *)EA_CONFIG_SYSTEM, ~829);	
+	
+		//memset(&gu8_inOutput[0][0],0,160);
+		////Input ----------------------------------
+		//strcpy(&gu8_inOutput[0][0],"MANUAL");
+		//strcpy(&gu8_inOutput[1][0],"AUTO");
+		//strcpy(&gu8_inOutput[2][0],"ON");
+		//strcpy(&gu8_inOutput[3][0],"OFF");
+		//strcpy(&gu8_inOutput[4][0],"MANUAL");
+		//strcpy(&gu8_inOutput[5][0],"VFD");
+		//strcpy(&gu8_inOutput[6][0],"MANUAL");
+		//strcpy(&gu8_inOutput[7][0],"AUTO");
+		////Output ----------------------------------
+		//strcpy(&gu8_inOutput[8][0],"MANUAL");
+		//strcpy(&gu8_inOutput[9][0],"AUTO");
+		//strcpy(&gu8_inOutput[10][0],"MANUAL");
+		//strcpy(&gu8_inOutput[11][0],"AUTO");
+		//strcpy(&gu8_inOutput[12][0],"MANUAL");
+		//strcpy(&gu8_inOutput[13][0],"AUTO");
+		//strcpy(&gu8_inOutput[14][0],"MANUAL");
+		//strcpy(&gu8_inOutput[15][0],"AUTO");
+		//
+		//OSWriteEEPromBlock((uint8_t*)EA_IP1_HIGH_NAME,(uint8_t*)&gu8_inOutput[0][0],160);
 		
 		gu8_IsCOMDisable=0;
 		gu8_IsLCDDisable=0;
@@ -410,8 +411,8 @@ void SetDefault(void)
 	}
 	else
 	{
-		OSReadEEPromBlock((uint8_t*)EA_IP1_HIGH_NAME,(uint8_t*)&gu8_inOutput[0][0],160);
-		
+		//OSReadEEPromBlock((uint8_t*)EA_IP1_HIGH_NAME,(uint8_t*)&gu8_inOutput[0][0],160);
+		//
 		gu8_IsLCDDisable=(uint8_t)OSReadEEPromWord((unsigned int *)LCD_CONTROL_ADDR);
 		if(gu8_IsLCDDisable>1)
 		{

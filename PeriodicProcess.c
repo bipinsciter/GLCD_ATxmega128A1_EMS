@@ -9,7 +9,7 @@
 #include "DeviceIO.h"
 #include "pid.h"
 
-static int serialTime, loggingTime;
+static int serialTime,serialPort, loggingTime;
 static int buzzerSpan, buzzerOnTime, buzzerTimeCounter, buzzerDisableTime, oldBuzzVal, currBuzzVal;
 
 void PERIODIC_FUNC_NAME( void )
@@ -38,9 +38,10 @@ void PERIODIC_FUNC_NAME( void )
 	if( IsSerialEnabled() && IsBroadcastEnabled() && --serialTime == 0 )
 	{
 		serialTime = GetParameterValue( BROADCAST_INTERVAL );
-
+		serialPort = GetParameterValue( BROADCAST_PORT );
+		
 		SerialPrinter();
-		SerialBroadcast();
+		SerialBroadcast(serialPort);
 	}
 
 	currBuzzVal = AlarmActive_Buzzer();
@@ -89,6 +90,7 @@ void PeriodicProcessInit()
 {
 	loggingTime = GetParameterValue( LOGGING_INTERVAL );
 	serialTime = GetParameterValue( BROADCAST_INTERVAL );
+	serialPort = GetParameterValue( BROADCAST_PORT );
 	buzzerTimeCounter = 0;
 	buzzerDisableTime = GetParameterValue( BUZZER_DISABLE_TIME );
 }

@@ -675,7 +675,7 @@ void uc1638_Init(void)
 	
 	uc1638WriteCommand(0x81);		//set vop
 	//uc1638WriteData(130);			//  pm=106 Set VLCD=15V
-    uc1638WriteData(138);			//  pm=106 Set VLCD=15V
+    uc1638WriteData(120);			//  pm=106 Set VLCD=15V
 	
 	uc1638WriteCommand(0xB8);		//ÆÁ±ÎMTP
 	uc1638WriteData(0x00);

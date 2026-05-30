@@ -12,9 +12,10 @@
 extern uint8_t u8_resetTimer;
 
 void UARTC0RxTimeout(void);
+void UARTC1RxTimeout(void);
 void SerialInterfaceTask();
 void SerialInterfaceInit();
-void SerialBroadcast();
+void SerialBroadcast(uint8_t port);
 void SerialPrinter();
 void SerialPrintAlarm( uint8_t alarmId, uint8_t state );
 void SerialBroadcastAlarm( uint8_t alarmData );

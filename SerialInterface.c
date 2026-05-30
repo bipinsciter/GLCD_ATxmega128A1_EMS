@@ -101,11 +101,11 @@ Send (broadcast):
 
 static int uart_putchar(char c, FILE *stream);
 static void SerialPrint( char * str );
-static void SendPacket( uint8_t dataId, char * dataVal, uint8_t dataLen );
+static void SendPacket( uint8_t comId, uint8_t dataId, char * dataVal, uint8_t dataLen );
 static int MakeAllRuntimeParaXmitSrting();
  void vBaseTimerCallback( TimerHandle_t xBaseTimer);
  
-static uint8_t cmdId,cmdId1;
+static uint8_t cmdId[2];
 static char rxDataBuffer[2][RX0_BUFSZ];
 static char txDataBuffer[TX0_BUFSZ];
 static int paraValue;
@@ -173,13 +173,13 @@ ISR(USARTC0_RXC_vect)
 	}
 	else if(rxMode==2)
 	{
-		cmdId = ch;
+		cmdId[0] = ch;
 		rxDataBuffer[0][rxDataLen[0]++]=ch;
 		rxMode=4;
 	}
 	else if(rxMode==3)
 	{
-		cmdId = ch;
+		cmdId[0] = ch;
 		rxDataBuffer[0][rxDataLen[0]++]=ch;
 		rxMode=4;
 	}
@@ -280,13 +280,13 @@ ISR(USARTC1_RXC_vect)
 	}
 	else if(rxMode1==2)
 	{
-		cmdId = ch;
+		cmdId[1] = ch;
 		rxDataBuffer[1][rxDataLen[1]++]=ch;
-		rxMode=4;
+		rxMode1=4;
 	}
-	else if(rxMode==3)
+	else if(rxMode1==3)
 	{
-		cmdId1 = ch;
+		cmdId[1] = ch;
 		rxDataBuffer[1][rxDataLen[1]++]=ch;
 		rxMode1=4;
 	}
@@ -360,9 +360,12 @@ void SerialInterfaceTask( void )
 				 
 	if((msgRcvd==1) || (msgRcvd1==1))
 	{
+		if (msgRcvd==1) Ind=0;
+		else Ind=1;
+		
 		if(gu8_IsCOMDisable)
 		{
-			if(cmdId==COM_CONTROL_ID)
+			if(cmdId[Ind]==COM_CONTROL_ID)
 			{
 				
 			}
@@ -380,12 +383,11 @@ void SerialInterfaceTask( void )
 			}
 		}
 		
-		if (msgRcvd==1) Ind=0;
-		else Ind=1;
+		
 		
         // Valid packet is detected. Process it.
         //OSSemaTakeEver(SerialDeviceMutex);
-        switch( cmdId )
+        switch( cmdId[Ind] )
         {
 			case PUT_DFU_ID:
 			 
@@ -393,7 +395,7 @@ void SerialInterfaceTask( void )
 				if(tempshort==DFU_PASSWORD)
 				{
 					OSWriteEEPromWord((unsigned int *)DFU_NUMBER_LOGIC, 0xABCD);
-					SendPacket( PUT_DFU_ID, txDataBuffer, i);
+					SendPacket(Ind, PUT_DFU_ID, txDataBuffer, i);
 					u8_DFUresetTimer = 3;
 					 
 					//software_reset();
@@ -407,7 +409,7 @@ void SerialInterfaceTask( void )
 				{
 					gu8_IsLCDDisable=rxDataBuffer[Ind][2]-'0';
 					OSWriteEEPromWord((unsigned int *)LCD_CONTROL_ADDR, (unsigned int)gu8_IsLCDDisable);
-					SendPacket( LCD_CONTROL_ID, txDataBuffer, i);
+					SendPacket(Ind, LCD_CONTROL_ID, txDataBuffer, i);
 					u8_resetTimer = 3;
 				}
 			
@@ -419,14 +421,14 @@ void SerialInterfaceTask( void )
 				{
 					gu8_IsCOMDisable=rxDataBuffer[Ind][2]-'0';
 					OSWriteEEPromWord((unsigned int *)COM_CONTROL_ADDR, (unsigned int)gu8_IsCOMDisable);
-					SendPacket( COM_CONTROL_ID, txDataBuffer, i);
+					SendPacket(Ind, COM_CONTROL_ID, txDataBuffer, i);
 				}
 			
 			break;
 			 
 		    case READ_ALL_RUNTIME_VALUES:
             i = MakeAllRuntimeParaXmitSrting();
- 		        SendPacket( READ_ALL_RUNTIME_VALUES, txDataBuffer, i);
+ 		        SendPacket(Ind, READ_ALL_RUNTIME_VALUES, txDataBuffer, i);
 			 	break;
 		    case READ_DP1_VALUE:
 				if (IsDP1Enabled())
@@ -435,12 +437,12 @@ void SerialInterfaceTask( void )
 				    txDataBuffer[0] = senVal.errorCode;
 					//locked_sprintf_P( txDataBuffer+1, PSTR("%d"), ConvertToPascal(PRES_SENS_SM9543, senVal.convertedValue, DP1_SENSOR_RESOLUTION_SM9543, GetParameterValue(DP1_RANGE)) );
 					locked_sprintf_P( txDataBuffer+1, PSTR("%d"), senVal.convertedValue );
-				    SendPacket( READ_DP1_VALUE, txDataBuffer, strlen(txDataBuffer+1)+1);
+				    SendPacket(Ind, READ_DP1_VALUE, txDataBuffer, strlen(txDataBuffer+1)+1);
 				}
 				else
 				{
 				    txDataBuffer[0] = ERROR_CMD_INVALID;
-				    SendPacket( READ_DP1_VALUE, txDataBuffer, 1);
+				    SendPacket(Ind, READ_DP1_VALUE, txDataBuffer, 1);
 				}
 			 	break;
 		    case READ_DP2_VALUE:
@@ -450,12 +452,12 @@ void SerialInterfaceTask( void )
 				    txDataBuffer[0] = senVal.errorCode;
 				    locked_sprintf_P( txDataBuffer+1, PSTR("%d"), senVal.convertedValue );
 					//locked_sprintf_P( txDataBuffer+1, PSTR("%d"), ConvertToPascal(PRES_SENS_SM9543, senVal.convertedValue, DP2_SENSOR_RESOLUTION_SM9543, GetParameterValue(DP2_RANGE)) );
-				    SendPacket( READ_DP2_VALUE, txDataBuffer, strlen(txDataBuffer+1)+1);
+				    SendPacket(Ind, READ_DP2_VALUE, txDataBuffer, strlen(txDataBuffer+1)+1);
 				}
 				else
 				{
 				    txDataBuffer[0] = ERROR_CMD_INVALID;
-				    SendPacket( READ_DP2_VALUE, txDataBuffer, 1);
+				    SendPacket(Ind, READ_DP2_VALUE, txDataBuffer, 1);
 				}
 			 	break;
 			case READ_DP3_VALUE:
@@ -465,12 +467,12 @@ void SerialInterfaceTask( void )
 					txDataBuffer[0] = senVal.errorCode;
 					locked_sprintf_P( txDataBuffer+1, PSTR("%d"), senVal.convertedValue );
 					//locked_sprintf_P( txDataBuffer+1, PSTR("%d"), ConvertToPascal(PRES_SENS_SM9543, senVal.convertedValue, DP3_SENSOR_RESOLUTION_SM9543, GetParameterValue(DP3_RANGE)) );
-					SendPacket( READ_DP3_VALUE, txDataBuffer, strlen(txDataBuffer+1)+1);
+					SendPacket(Ind, READ_DP3_VALUE, txDataBuffer, strlen(txDataBuffer+1)+1);
 				}
 				else
 				{
 					txDataBuffer[0] = ERROR_CMD_INVALID;
-					SendPacket( READ_DP3_VALUE, txDataBuffer, 1);
+					SendPacket(Ind, READ_DP3_VALUE, txDataBuffer, 1);
 				}
 				break;
 		    case READ_TEMP_VALUE:
@@ -479,12 +481,12 @@ void SerialInterfaceTask( void )
                 GetPareValue(TEMPERATURE_VAL_INDEX, &senVal);//GetTemperature( &senVal );
 				    txDataBuffer[0] = senVal.errorCode;
 				    locked_sprintf_P( txDataBuffer+1, PSTR("%d"), senVal.convertedValue );
-				    SendPacket( READ_TEMP_VALUE, txDataBuffer, strlen(txDataBuffer+1)+1);
+				    SendPacket(Ind, READ_TEMP_VALUE, txDataBuffer, strlen(txDataBuffer+1)+1);
 				}
 				else
 				{
 				    txDataBuffer[0] = ERROR_CMD_INVALID;
-				    SendPacket( READ_TEMP_VALUE, txDataBuffer, 1);
+				    SendPacket(Ind, READ_TEMP_VALUE, txDataBuffer, 1);
 				}
 			 	break;
 		    case READ_HUMIDITY_VALUE:
@@ -493,17 +495,17 @@ void SerialInterfaceTask( void )
                 GetPareValue(HUMIDITY_VAL_INDEX, &senVal);//GetHumidity( &senVal );
 				    txDataBuffer[0] = senVal.errorCode;
 				    locked_sprintf_P( txDataBuffer+1, PSTR("%d"), senVal.convertedValue );
-				    SendPacket( READ_HUMIDITY_VALUE, txDataBuffer, strlen(txDataBuffer+1)+1);
+				    SendPacket(Ind, READ_HUMIDITY_VALUE, txDataBuffer, strlen(txDataBuffer+1)+1);
 				}
 				else
 				{
 				    txDataBuffer[0] = ERROR_CMD_INVALID;
-				    SendPacket( READ_HUMIDITY_VALUE, txDataBuffer, 1);
+				    SendPacket(Ind, READ_HUMIDITY_VALUE, txDataBuffer, 1);
 				}
 			 	break;
 		    case READ_SYSTEM_ERR:
                 txDataBuffer[0] = GetSystemError();
- 			    SendPacket( READ_SYSTEM_ERR, txDataBuffer, 1);
+ 			    SendPacket(Ind, READ_SYSTEM_ERR, txDataBuffer, 1);
 				break;
 		    case READ_ALARMS:
 			    tempshort = GetAlarms();
@@ -516,7 +518,7 @@ void SerialInterfaceTask( void )
                 txDataBuffer[3] = tempshort & 0x3;
 				tempshort >>= 2;
 				txDataBuffer[4] = tempshort & 0x3;
-                SendPacket( READ_ALARMS, txDataBuffer, 5 );
+                SendPacket(Ind, READ_ALARMS, txDataBuffer, 5 );
 				break;
 
             case READ_PID_PER_VALUES:
@@ -532,28 +534,28 @@ void SerialInterfaceTask( void )
                 paraValue = GetRHPIDPercent();
 			    txDataBuffer[6] = ((char *)&paraValue)[0];
 			    txDataBuffer[7] = ((char *)&paraValue)[1];					
-                SendPacket( READ_PID_PER_VALUES, txDataBuffer, 8 );
+                SendPacket(Ind, READ_PID_PER_VALUES, txDataBuffer, 8 );
 				break;
 
 		    case READ_INPUT:
 
                 GetInput( (uint8_t*)&txDataBuffer[1] );  // return value
   		   		txDataBuffer[0] = ERROR_OK;
-                SendPacket( READ_INPUT, txDataBuffer, 2 );
+                SendPacket(Ind, READ_INPUT, txDataBuffer, 2 );
 				break;
 
 		    case READ_OUTPUT:
 
                 GetOutput( (uint8_t*)&txDataBuffer[1] );  // return value
   		   		txDataBuffer[0] = ERROR_OK;
-                SendPacket( READ_OUTPUT, txDataBuffer, 2 );
+                SendPacket(Ind, READ_OUTPUT, txDataBuffer, 2 );
 				break;
 
 		    case WRITE_OUTPUT:
 
  			    SetOutput( (uint8_t)rxDataBuffer[Ind][3], (uint8_t*)&txDataBuffer[1] );  // set value, return value
  				txDataBuffer[0] = ERROR_OK;
-               	SendPacket( WRITE_OUTPUT, txDataBuffer, 2 );
+               	SendPacket(Ind, WRITE_OUTPUT, txDataBuffer, 2 );
 				OSWriteEEPromWord((unsigned int *)EA_OUTPUT, rxDataBuffer[Ind][3]);
 				break;
 
@@ -563,7 +565,7 @@ void SerialInterfaceTask( void )
 				if( rxDataLen[Ind] < (uint8_t)1 )
 				{
     		        txDataBuffer[0] = ERROR_PARA_INVALID;
-	    			SendPacket( READ_PARAMETER, txDataBuffer, 1);
+	    			SendPacket(Ind, READ_PARAMETER, txDataBuffer, 1);
 		    		break;
 			    }
 					
@@ -594,12 +596,12 @@ void SerialInterfaceTask( void )
 						txDataBuffer[1] = rxDataBuffer[Ind][2];
 						if( ch != ERROR_OK )
 						{
-							SendPacket( READ_PARAMETER, txDataBuffer, 2);
+							SendPacket(Ind, READ_PARAMETER, txDataBuffer, 2);
 						}
 						else
 						{
 							memcpy(&txDataBuffer[2],&gu8_inOutput[(uint8_t)rxDataBuffer[Ind][2]-IP1_HIGH_NAME][0],8);
-							SendPacket( READ_PARAMETER, txDataBuffer, 10);
+							SendPacket(Ind, READ_PARAMETER, txDataBuffer, 10);
 						}
 						
 					break;
@@ -611,12 +613,12 @@ void SerialInterfaceTask( void )
 						txDataBuffer[1] = rxDataBuffer[Ind][2];
 						if( ch != ERROR_OK )
 						{
-							SendPacket( READ_PARAMETER, txDataBuffer, 2);
+							SendPacket(Ind, READ_PARAMETER, txDataBuffer, 2);
 						}
 						else
 						{
 							locked_sprintf_P( txDataBuffer+2, PSTR("%d"), paraValue );
-							SendPacket( READ_PARAMETER, txDataBuffer, strlen(txDataBuffer+2)+2);
+							SendPacket(Ind, READ_PARAMETER, txDataBuffer, strlen(txDataBuffer+2)+2);
 						}
 						
 					break;
@@ -626,7 +628,7 @@ void SerialInterfaceTask( void )
                 if( rxDataLen[Ind] < (uint8_t)2 )
 				{
   					txDataBuffer[0] = ERROR_PARA_INVALID;
-	    			SendPacket( WRITE_PARAMETER, txDataBuffer, 1);
+	    			SendPacket(Ind, WRITE_PARAMETER, txDataBuffer, 1);
 		    		break;
 			    }
 				  
@@ -657,12 +659,12 @@ void SerialInterfaceTask( void )
 						txDataBuffer[1] = rxDataBuffer[Ind][2];
 						if( ch != ERROR_OK )
 						{
-							SendPacket( WRITE_PARAMETER, txDataBuffer, 2);
+							SendPacket(Ind, WRITE_PARAMETER, txDataBuffer, 2);
 						}
 						else
 						{
 							memcpy(&txDataBuffer[2],&rxDataBuffer[Ind][3],8);
-							SendPacket( WRITE_PARAMETER, txDataBuffer, 10);
+							SendPacket(Ind, WRITE_PARAMETER, txDataBuffer, 10);
 						}
 					  
 					break;
@@ -674,11 +676,11 @@ void SerialInterfaceTask( void )
 					txDataBuffer[0] = ch;
 					txDataBuffer[1] = rxDataBuffer[Ind][2];
 					if( ch != ERROR_OK )
-						SendPacket( WRITE_PARAMETER, txDataBuffer, 2);
+						SendPacket(Ind, WRITE_PARAMETER, txDataBuffer, 2);
 					else
 					{
 						locked_sprintf_P( txDataBuffer+2, PSTR("%d"), paraValue );
-						SendPacket( WRITE_PARAMETER, txDataBuffer, strlen(txDataBuffer+2)+2);
+						SendPacket(Ind, WRITE_PARAMETER, txDataBuffer, strlen(txDataBuffer+2)+2);
 					}
 						
 					break;
@@ -687,7 +689,7 @@ void SerialInterfaceTask( void )
 				break;
 			default:
 		        txDataBuffer[0] = ERROR_CMD_INVALID;
-				SendPacket( cmdId, txDataBuffer, 1);
+				SendPacket(Ind, cmdId[Ind], txDataBuffer, 1);
 				break;
 		}
         //OSSemaGive(SerialDeviceMutex);
@@ -743,7 +745,7 @@ uint8_t CalCRC(uint8_t *ptr,uint16_t NoOfByte)
 }
 
 
-static void SendPacket( uint8_t cId, char * val, uint8_t len )
+static void SendPacket( uint8_t comId, uint8_t cId, char * val, uint8_t len )
 {
 	//uint8_t buff1[3],buff2[2];
    
@@ -756,14 +758,28 @@ static void SendPacket( uint8_t cId, char * val, uint8_t len )
 	for(i = len; i; i--)
 	ckSum = (ckSum + val[i-1]) & 0x7F;
 
-	TX0_ENB_RS485;
-	put_char(&USARTC0, SERIAL_RESP_SOT );
-	put_char(&USARTC0, devId );
-	put_char(&USARTC0, cId );
-	for( i = 0; i < len; i++) put_char(&USARTC0, val[i] );
-	put_char(&USARTC0, ckSum );
-	put_char(&USARTC0, SERIAL_RESP_EOT );
-	TX0_DIS_RS485;
+	if(!comId)
+	{
+		TX0_ENB_RS485;
+		put_char(&USARTC0, SERIAL_RESP_SOT );
+		put_char(&USARTC0, devId );
+		put_char(&USARTC0, cId );
+		for( i = 0; i < len; i++) put_char(&USARTC0, val[i] );
+		put_char(&USARTC0, ckSum );
+		put_char(&USARTC0, SERIAL_RESP_EOT );
+		TX0_DIS_RS485;
+	}
+	else
+	{
+		TX1_ENB_RS485;
+		put_char(&USARTC1, SERIAL_RESP_SOT );
+		put_char(&USARTC1, devId );
+		put_char(&USARTC1, cId );
+		for( i = 0; i < len; i++) put_char(&USARTC1, val[i] );
+		put_char(&USARTC1, ckSum );
+		put_char(&USARTC1, SERIAL_RESP_EOT );
+		TX1_DIS_RS485;
+	}
 	
 	//buff1[0] = SERIAL_RESP_SOT;
 	//buff1[1] = devId;
@@ -822,14 +838,22 @@ static void SerialPrint( char * str )
 
 
 
-void SerialBroadcast()
+void SerialBroadcast(uint8_t port)
 {
    if( IsWirelessBroadcastEnabled() )
    {
       UIResourceLock();
       //OSSemaTakeEver(SerialDeviceMutex);
 
-      SendPacket( ALL_RUNTIME_VALUES_BRDCAST, txDataBuffer, MakeAllRuntimeParaXmitSrting());
+	if(port==0)
+		SendPacket(0, ALL_RUNTIME_VALUES_BRDCAST, txDataBuffer, MakeAllRuntimeParaXmitSrting());
+	else if(port==1)
+		SendPacket(1, ALL_RUNTIME_VALUES_BRDCAST, txDataBuffer, MakeAllRuntimeParaXmitSrting());
+	else if(port==2)
+	{
+		SendPacket(0, ALL_RUNTIME_VALUES_BRDCAST, txDataBuffer, MakeAllRuntimeParaXmitSrting());
+		SendPacket(1, ALL_RUNTIME_VALUES_BRDCAST, txDataBuffer, MakeAllRuntimeParaXmitSrting());
+	}
 
 /*
       if (IsDP1Enabled())
@@ -838,7 +862,7 @@ void SerialBroadcast()
          txDataBuffer[0] = senVal.errorCode;
 		 //locked_sprintf_P( txDataBuffer+1, PSTR("%d"), ConvertToPascal(PRES_SENS_SM9543, senVal.convertedValue, DP1_SENSOR_RESOLUTION_SM9543, GetParameterValue(DP1_RANGE)) );
          locked_sprintf_P( txDataBuffer+1, PSTR("%d"), senVal.convertedValue );
-         SendPacket( DP1_BRDCAST, txDataBuffer, strlen(txDataBuffer+1)+1);
+         SendPacket(Ind, DP1_BRDCAST, txDataBuffer, strlen(txDataBuffer+1)+1);
       }
       if (IsDP2Enabled())
       {
@@ -846,7 +870,7 @@ void SerialBroadcast()
          txDataBuffer[0] = senVal.errorCode;
 		 //locked_sprintf_P( txDataBuffer+1, PSTR("%d"), ConvertToPascal(PRES_SENS_SM9543, senVal.convertedValue, DP2_SENSOR_RESOLUTION_SM9543, GetParameterValue(DP2_RANGE)) );
          locked_sprintf_P( txDataBuffer+1, PSTR("%d"), senVal.convertedValue );
-         SendPacket( DP2_BRDCAST, txDataBuffer, strlen(txDataBuffer+1)+1 );
+         SendPacket(Ind, DP2_BRDCAST, txDataBuffer, strlen(txDataBuffer+1)+1 );
       }
 	  if (IsDP3Enabled())
 	  {
@@ -854,26 +878,26 @@ void SerialBroadcast()
 		  txDataBuffer[0] = senVal.errorCode;
 		  //locked_sprintf_P( txDataBuffer+1, PSTR("%d"), ConvertToPascal(PRES_SENS_SM9543, senVal.convertedValue, DP3_SENSOR_RESOLUTION_SM9543, GetParameterValue(DP3_RANGE)) );
 		  locked_sprintf_P( txDataBuffer+1, PSTR("%d"), senVal.convertedValue );
-		  SendPacket( DP3_BRDCAST, txDataBuffer, strlen(txDataBuffer+1)+1 );
+		  SendPacket(Ind, DP3_BRDCAST, txDataBuffer, strlen(txDataBuffer+1)+1 );
 	  }
       if (IsTemperatureEnabled())
       {
          GetPareValue(TEMPERATURE_VAL_INDEX, &senVal);//GetTemperature( &senVal );
          txDataBuffer[0] = senVal.errorCode;
    		locked_sprintf_P( txDataBuffer+1, PSTR("%d"), senVal.convertedValue );
-         SendPacket( TEMPERATURE_BRDCAST, txDataBuffer, strlen(txDataBuffer+1)+1 );
+         SendPacket(Ind, TEMPERATURE_BRDCAST, txDataBuffer, strlen(txDataBuffer+1)+1 );
       }
       if (IsHumidityEnabled())
       {
          GetPareValue(HUMIDITY_VAL_INDEX, &senVal);//GetHumidity( &senVal );
          txDataBuffer[0] = senVal.errorCode;
          locked_sprintf_P( txDataBuffer+1, PSTR("%d"), senVal.convertedValue );
-         SendPacket( HUMIDITY_BRDCAST, txDataBuffer, strlen(txDataBuffer+1)+1 );
+         SendPacket(Ind, HUMIDITY_BRDCAST, txDataBuffer, strlen(txDataBuffer+1)+1 );
       }
       if( systemError != (uint8_t)ERROR_OK )
       {
          txDataBuffer[0] = systemError;
-         SendPacket( SYSTEMERR_BRDCAST, txDataBuffer, 1 );
+         SendPacket(Ind, SYSTEMERR_BRDCAST, txDataBuffer, 1 );
       }
 */
       //OSSemaGive(SerialDeviceMutex);
@@ -925,25 +949,25 @@ void SerialPrinter()
 }
 
 
-void SerialBroadcastAlarm( uint8_t alarmData )
-{
-   if( IsWirelessBroadcastEnabled())  // Broadcast enabled
-   {
-      //OSSemaTakeEver(SerialDeviceMutex);
-//      TX_ENB_RS485;
-      txDataBuffer[0] = alarmData & 0x3;
-	  alarmData >>= 2;
-      txDataBuffer[1] = alarmData & 0x3;
-	  alarmData >>= 2;
-      txDataBuffer[2] = alarmData & 0x3;
-	  alarmData >>= 2;
-      txDataBuffer[3] = alarmData & 0x3;
-      SendPacket( ALARM_BRDCAST, txDataBuffer, 4 );
-//      TX_DIS_RS485;
-      //OSSemaGive(SerialDeviceMutex);
-      SerialBroadcast();
-   }
-}
+//void SerialBroadcastAlarm( uint8_t alarmData )
+//{
+   //if( IsWirelessBroadcastEnabled())  // Broadcast enabled
+   //{
+      ////OSSemaTakeEver(SerialDeviceMutex);
+////      TX_ENB_RS485;
+      //txDataBuffer[0] = alarmData & 0x3;
+	  //alarmData >>= 2;
+      //txDataBuffer[1] = alarmData & 0x3;
+	  //alarmData >>= 2;
+      //txDataBuffer[2] = alarmData & 0x3;
+	  //alarmData >>= 2;
+      //txDataBuffer[3] = alarmData & 0x3;
+      //SendPacket(Ind, ALARM_BRDCAST, txDataBuffer, 4 );
+////      TX_DIS_RS485;
+      ////OSSemaGive(SerialDeviceMutex);
+      //SerialBroadcast();
+   //}
+//}
 
 
 void SerialPrintAlarm( uint8_t alarmId, uint8_t state )
