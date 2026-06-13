@@ -93,7 +93,8 @@ typedef struct
    uint8_t errorCode;
    uint16_t rawValue;
    int      convertedValue;
-   //int      FinalValue;
+   int      DispValue;
+   
 }SENSOR_VALUE;
 
 typedef union

@@ -99,10 +99,9 @@ void DEVICEIO_FUNC_NAME( void )
 	if (IsDP1Enabled())
 	{
 		retVal = GetSensorDP1( &value );
+		sensorVal[DP1_VAL_INDEX].rawValue = value;
 		  
-		// Convert the value to PSI
-		convertedValue = value + GetParameterValue(DP1_ZERO_ADJ);
-		AveragePara(DP1_VAL_INDEX, retVal, value, convertedValue );
+		convertedValue = value - GetParameterValue(DP1_ZERO_ADJ);
 		
 		su16_dpAlmdiff[0] = GetParameterValue(DP1_UPPER_ALARM_OFF_LIMIT) - GetParameterValue(DP1_LOWER_ALARM_ON_LIMIT);
 			
@@ -128,15 +127,17 @@ void DEVICEIO_FUNC_NAME( void )
 			//b.dp_sw_factor_add1 = 0;
 		}
 		convertedValue += su16_convertedValue[0];
+		
+		AveragePara(DP1_VAL_INDEX, retVal, value, convertedValue );
 	}
 		
 	if (IsDP2Enabled())
 	{
 		retVal = GetSensorDP2( &value );
+		sensorVal[DP2_VAL_INDEX].rawValue = value;
 		 
 		// Convert the value to PSI
-		convertedValue = value + GetParameterValue(DP2_ZERO_ADJ);
-		AveragePara(DP2_VAL_INDEX, retVal, value, convertedValue );
+		convertedValue = value - GetParameterValue(DP2_ZERO_ADJ);
 		
 		su16_dpAlmdiff[1] = GetParameterValue(DP2_UPPER_ALARM_OFF_LIMIT) - GetParameterValue(DP2_LOWER_ALARM_ON_LIMIT);
 			
@@ -162,15 +163,17 @@ void DEVICEIO_FUNC_NAME( void )
 			//b.dp_sw_factor_add1 = 0;
 		}
 		convertedValue += su16_convertedValue[1];
+		
+		AveragePara(DP2_VAL_INDEX, retVal, value, convertedValue );
 	}
 	  
 	if (IsDP3Enabled())
 	{
 		retVal = GetSensorDP3( &value );
-
+		sensorVal[DP3_VAL_INDEX].rawValue = value;
+		
 		// Convert the value to PSI
-		convertedValue = value + GetParameterValue(DP3_ZERO_ADJ);		
-		AveragePara(DP3_VAL_INDEX, retVal, value, convertedValue );
+		convertedValue = value - GetParameterValue(DP3_ZERO_ADJ);		
 		
 		su16_dpAlmdiff[2] = GetParameterValue(DP3_UPPER_ALARM_OFF_LIMIT) - GetParameterValue(DP3_LOWER_ALARM_ON_LIMIT);
 		
@@ -196,6 +199,8 @@ void DEVICEIO_FUNC_NAME( void )
 			//b.dp_sw_factor_add1 = 0;
 		}
 		convertedValue += su16_convertedValue[2];
+		
+		AveragePara(DP3_VAL_INDEX, retVal, value, convertedValue );
 	}
 		
 	oldAlarmOut.alarmByte = alarmOut.alarmByte;

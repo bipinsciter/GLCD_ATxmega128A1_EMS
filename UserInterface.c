@@ -900,19 +900,19 @@ void UserInterfaceTask( void )
 				if(IsDP1Enabled())
 				{
 					GetPareValue(DP1_VAL_INDEX, &senVal3);
-					OSWriteEEPromWord((unsigned int *)EA_DP1_ZERO_ADJ, -senVal3.convertedValue);
+					OSWriteEEPromWord((unsigned int *)EA_DP1_ZERO_ADJ, senVal3.rawValue);
 				}
 				
 				if(IsDP2Enabled())
 				{
 					GetPareValue(DP2_VAL_INDEX, &senVal3);
-					OSWriteEEPromWord((unsigned int *)EA_DP2_ZERO_ADJ, -senVal3.convertedValue);
+					OSWriteEEPromWord((unsigned int *)EA_DP2_ZERO_ADJ, senVal3.rawValue);
 				}
 				
 				if(IsDP3Enabled())
 				{
 					GetPareValue(DP3_VAL_INDEX, &senVal3);
-					OSWriteEEPromWord((unsigned int *)EA_DP3_ZERO_ADJ, -senVal3.convertedValue);
+					OSWriteEEPromWord((unsigned int *)EA_DP3_ZERO_ADJ, senVal3.rawValue);
 				}
 				
 				DPautocal = 1;
