@@ -352,6 +352,9 @@ extern char gu8_inOutput[16][10];
 extern uint8_t gu8_IsCOMDisable, gu8_IsLCDDisable, u8_DFUresetTimer; 
 extern int PreTd,PostTd,TDdiff;
 extern uint8_t PreTdErr,PostTdErr,TDdiffErr;
+extern uint16_t eeprom_address;
+extern int16_t eeprom_value;
+extern uint8_t eeprom_write_timeout;
 	
 void UIResourceLock();
 void UIResourceUnlock();

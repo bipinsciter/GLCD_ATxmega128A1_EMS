@@ -17,6 +17,7 @@
 #include "HardwareInfo.h"
 #include "rtc.h"
 #include "eepromAdr.h"
+#include "FreeRTOSBufferedSerial.h"
 #include <util/delay.h>
 
 // Convenience macro for enabling pull-ups on specified pins on any port.
@@ -429,6 +430,33 @@ void SetDefault(void)
 	}
 }
 
+// Enumeration to make handling the reset reason cleaner in your application
+typedef enum {
+	RESET_UNKNOWN      = 0x00,
+	RESET_POWER_ON     = (1 << 0),
+	RESET_EXTERNAL     = (1 << 1),
+	RESET_WATCHDOG     = (1 << 2),
+	RESET_PDI          = (1 << 3),
+	RESET_SOFTWARE     = (1 << 4)
+} ResetReason_t;
+
+// Global variable to hold the detected reset reason
+volatile ResetReason_t g_reset_reason = RESET_UNKNOWN;
+
+void Reset_Init(void)
+{
+	// 1. Read the raw status register
+	uint8_t raw_status = RST.STATUS;
+	
+	// 2. Map the raw bits to our enumeration (or just use the raw byte)
+	g_reset_reason = (ResetReason_t)(raw_status & 0x1F);
+	
+	// 3. CRITICAL: Clear the status flags by writing 1s to the bits that were set.
+	// If you don't do this, old reset reasons will persist into the next reset.
+	RST.STATUS = raw_status;
+}
+
+
 uint8_t ms50=0,DPTimer=0,TRTimer=0,PerodicTimer=0;
 
 int main(void)                 // Main runs under the AvrX Stack
@@ -436,7 +464,9 @@ int main(void)                 // Main runs under the AvrX Stack
 	//Global Interrupt Disable
 	cli();
 	
-	OSInit(); 
+	Reset_Init();
+
+	//OSInit(); 
    
 	InitSystemClock();	
    
@@ -456,6 +486,27 @@ int main(void)                 // Main runs under the AvrX Stack
 	DeviceIOInit();
 	PeriodicProcessInit();
 	UserInterfaceInit();
+	
+	// Example application logic based on the reset reason
+	if (g_reset_reason & RESET_POWER_ON)
+	{
+		// Cold start: Initialize all system variables, clear RAM logs, etc.
+		//put_char(&USARTC0, 'A' );
+	}
+	else if (g_reset_reason & RESET_WATCHDOG)
+	{
+		// Warm start from crash: Recover state or log an error to EEPROM
+		//put_char(&USARTC0, 'B' );
+	}
+	else if (g_reset_reason & RESET_EXTERNAL)
+	{
+		// Hardware button reset handler
+		//put_char(&USARTC0, 'C' );
+	}
+	else
+	{
+		//put_char(&USARTC0, 'D' );
+	}
 	
 	
 	PMIC.CTRL = PMIC_HILVLEN_bm | PMIC_MEDLVLEN_bm | PMIC_LOLVLEN_bm;
@@ -497,6 +548,15 @@ int main(void)                 // Main runs under the AvrX Stack
 			{
 				PERIODIC_FUNC_NAME();	//1 second
 				PerodicTimer=0;
+			}
+			
+			if(eeprom_write_timeout)
+			{
+				eeprom_write_timeout--;
+				if(!eeprom_write_timeout)
+				{
+					OSWriteEEPromWord((unsigned int *)eeprom_address, eeprom_value);
+				}
 			}
 
 			ms50=0;

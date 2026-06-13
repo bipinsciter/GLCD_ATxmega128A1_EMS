@@ -50,6 +50,8 @@
 
 #define SOFTWARE_VERSION                     209
 
+#define EEPROM_WRITE_TIMEOUT	30
+
 #define TRUE 1
 #define FALSE 0
 
@@ -831,6 +833,10 @@ uint8_t PreTdErr=0,PostTdErr=0,TDdiffErr=0;
 	
 static char prevKeys, currKeys, keys, keysPressed;
 
+uint16_t eeprom_address = 0;
+int16_t eeprom_value = 0;
+uint8_t eeprom_write_timeout = 0;
+   
 //static uint8_t timer, curDisplay;
 static SENSOR_VALUE senVal, senVal2,senVal3;
 //static ALARMS alarmOut;
@@ -1000,6 +1006,7 @@ void UserInterfaceInit()
          PrintLineCentered( 112, displayStr );
          isMasterReset = 1;
          SetAllParametersToDefault();
+		 isMasterReset = 0;
       }
 	  
       //OSSemaGive(UIMutex);
@@ -2441,6 +2448,8 @@ static void DisplayEditor(char keysPressed, char keys)
 		 // Setup key pressed select next parameter
          for( paraCnt = 0; paraCnt < sizeof(paraTableLCD)/sizeof(paraTableLCD[0]); paraCnt++ )
          {
+			 wdt_reset();
+			 
             if( paraUpReq )
             {
                if( activePara )
@@ -2785,7 +2794,17 @@ static void ParameterOperationsOnLowSettings( uint8_t operationType, int16_t * p
       if ( *paraValue >= temp)
          *paraValue = temp-1;
    }
-   OSWriteEEPromWord((unsigned int *)eepromAddr, *paraValue);
+
+	if(!isMasterReset)
+	{
+	   eeprom_address = eepromAddr;
+	   eeprom_value = *paraValue;
+	   eeprom_write_timeout = EEPROM_WRITE_TIMEOUT;
+	}
+	else
+	{
+		OSWriteEEPromWord((unsigned int *)eepromAddr, *paraValue);
+	}
 }
 
 
@@ -2810,7 +2829,17 @@ static void ParameterOperationsOnHighSettings( uint8_t operationType, int16_t * 
       if ( *paraValue > maxValue)
          *paraValue = maxValue;
    }
-   OSWriteEEPromWord((unsigned int *)eepromAddr, *paraValue);
+   
+   if(!isMasterReset)
+   {
+	   eeprom_address = eepromAddr;
+	   eeprom_value = *paraValue;
+	   eeprom_write_timeout = EEPROM_WRITE_TIMEOUT;
+   }
+   else
+   {
+	   OSWriteEEPromWord((unsigned int *)eepromAddr, *paraValue);
+   }
 }
 
 
@@ -5064,7 +5093,17 @@ static void ParameterOperationsSettings( uint8_t operationType, int16_t * paraVa
       else if ( *paraValue > maxVal )
       *paraValue = maxVal;
    }
-   OSWriteEEPromWord((unsigned int *)eepromAddr, *paraValue);
+
+   if(!isMasterReset)
+   {
+	   eeprom_address = eepromAddr;
+	   eeprom_value = *paraValue;
+	   eeprom_write_timeout = EEPROM_WRITE_TIMEOUT;
+   }
+   else
+   {
+	   OSWriteEEPromWord((unsigned int *)eepromAddr, *paraValue);
+   }
 }
 
 
@@ -5086,7 +5125,17 @@ static void ParameterOperationsSettingsRollover( uint8_t operationType, int16_t 
       else if ( *paraValue > maxVal )
          *paraValue = minVal;
    }
-   OSWriteEEPromWord((unsigned int *)eepromAddr, *paraValue);
+
+   if(!isMasterReset)
+   {
+	   eeprom_address = eepromAddr;
+	   eeprom_value = *paraValue;
+	   eeprom_write_timeout = EEPROM_WRITE_TIMEOUT;
+   }
+   else
+   {
+	   OSWriteEEPromWord((unsigned int *)eepromAddr, *paraValue);
+   }
 }
 
 //static void ParameterOperationsSettingsRolloverNoDefault( uint8_t operationType, int16_t * paraValue, unsigned int eepromAddr, int16_t minVal, int16_t maxVal )
@@ -5102,7 +5151,11 @@ static void ParameterOperationsSettingsRollover( uint8_t operationType, int16_t 
 		//else if ( *paraValue > maxVal )
 		//*paraValue = minVal;
 //
-		//OSWriteEEPromWord((unsigned int *)eepromAddr, *paraValue);
+		//eeprom_address = eepromAddr;
+		//eeprom_value = *paraValue;
+		//eeprom_write_timeout = 2;
+		//
+		////OSWriteEEPromWord((unsigned int *)eepromAddr, *paraValue);
 	//}
 //}
 
