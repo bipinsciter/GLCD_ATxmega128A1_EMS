@@ -48,7 +48,7 @@
 #include "rtc.h" 
 #include "pid.h"
 
-#define SOFTWARE_VERSION                     208
+#define SOFTWARE_VERSION                     209
 
 #define TRUE 1
 #define FALSE 0
@@ -717,10 +717,10 @@ static char * HumidityLowPIDTempAdjustPara( uint8_t operationType, int16_t * par
 //static char * TempRHScanTimePara(uint8_t operationType, int16_t * paraValue );
 //static char * TempRHAverageCntPara(uint8_t operationType, int16_t * paraValue );
 //static char * PresAverageCntPara(uint8_t operationType, int16_t * paraValue );
-//static char * PresAbsSensTypePara(uint8_t operationType, int16_t * paraValue );
-//static char * PresDiffSensTypePara(uint8_t operationType, int16_t * paraValue );
-//static char * PresDiff3SensTypePara(uint8_t operationType, int16_t * paraValue );
-//static char * ParticalSensTypePara(uint8_t operationType, int16_t * paraValue );
+static char * PresAbsSensTypePara(uint8_t operationType, int16_t * paraValue );
+static char * PresDiffSensTypePara(uint8_t operationType, int16_t * paraValue );
+static char * PresDiff3SensTypePara(uint8_t operationType, int16_t * paraValue );
+static char * ParticalSensTypePara(uint8_t operationType, int16_t * paraValue );
 //static char * ParticalSizeTypePara(uint8_t operationType, int16_t * paraValue );
 
 static char * VersionPara(uint8_t operationType, int16_t * paraValue );
@@ -735,6 +735,7 @@ static char * ParameterOperationsTimeValues( uint8_t mask, uint8_t maskWriteVal,
 static char * PressureUnitProcessPara( uint8_t operationType, int16_t * paraValue, int16_t dfltValue, unsigned int eepromAddr );
 static char * ParaSetIntegerVal(uint8_t operationType, int16_t * paraValue, unsigned int eepromAddr, int16_t dfltVal, int16_t minVal, int16_t maxVal );
 static char * ParaSetIntegerVal1(uint8_t operationType, int16_t * paraValue, unsigned int eepromAddr, int16_t dfltVal, int16_t minVal, int16_t maxVal );
+static char * ParaSetfloatVal(uint8_t operationType, int16_t * paraValue, unsigned int eepromAddr, int16_t dfltVal, int16_t minVal, int16_t maxVal );
 static char * ParaOutputType( unsigned int eepromAddr, uint8_t operationType, int16_t * paraValue );
 static char * AlarmSetupPara( uint8_t operationType, int16_t * paraValue, unsigned int eeAddress );
 static void ParameterOperationsSettings( uint8_t operationType, int16_t * paraValue, unsigned int eepromAddr, int16_t dfltValue, int16_t maxValue, int16_t minValue );
@@ -752,7 +753,7 @@ static char * OutputMappingPara1( uint8_t operationType, int16_t * paraValue, in
 //static void FormatAbsPressure( uint8_t unit, int16_t value);
 //static void FormatDiffPressure( uint8_t unit, int16_t value);
 //static void FormatDiff3Pressure( uint8_t unit, int16_t value);
-static void FormatDP(uint8_t senType, uint8_t unit, int16_t value, int16_t dpsenResolution, int16_t range1, uint8_t AreaType, int16_t length, int16_t width, int16_t radious);
+static void FormatDP(uint8_t unit, int16_t value, int16_t range1, uint8_t AreaType, int16_t length, int16_t width, int16_t radious);
 static void FormatTemperature( int16_t value, uint8_t decimal);
 static void FormatHumidity( int16_t value, uint8_t decimal);
 static void FormatFloat(int16_t value);
@@ -846,7 +847,7 @@ static char dispValSel = 0;
 void UserInterfaceTask( void )
 {
 	//OSSleep(KEYBOARD_LOOP_TIME);
-	static uint8_t DPautocale=0;
+	static uint8_t DPautocal=0;
 	
 	currKeys = (~KEYPAD_PORT_IN) & KEYS_ALL_MASK;
 	keysPressed = keys;
@@ -888,22 +889,27 @@ void UserInterfaceTask( void )
 		}
 		else if( !(KEYPAD_PORT_IN & (SETUP_KEY | DOWN_KEY) ))	//Auto DP calibration
 		{
-			if(!DPautocale)
+			if(!DPautocal)
 			{
-				int16_t ErrorCount;
-				GetPareValue(DP1_VAL_INDEX, &senVal3);
-				ErrorCount = (DP1_SENSOR_RESOLUTION_SM9543/2) - senVal3.rawValue;
-				OSWriteEEPromWord((unsigned int *)EA_DP1_ZERO_ADJ, ErrorCount);
+				if(IsDP1Enabled())
+				{
+					GetPareValue(DP1_VAL_INDEX, &senVal3);
+					OSWriteEEPromWord((unsigned int *)EA_DP1_ZERO_ADJ, -senVal3.convertedValue);
+				}
 				
-				GetPareValue(DP2_VAL_INDEX, &senVal3);
-				ErrorCount = (DP2_SENSOR_RESOLUTION_SM9543/2) - senVal3.rawValue; 
-				OSWriteEEPromWord((unsigned int *)EA_DP2_ZERO_ADJ, ErrorCount);
+				if(IsDP2Enabled())
+				{
+					GetPareValue(DP2_VAL_INDEX, &senVal3);
+					OSWriteEEPromWord((unsigned int *)EA_DP2_ZERO_ADJ, -senVal3.convertedValue);
+				}
 				
-				GetPareValue(DP3_VAL_INDEX, &senVal3);
-				ErrorCount = (DP3_SENSOR_RESOLUTION_SM9543/2) - senVal3.rawValue;
-				OSWriteEEPromWord((unsigned int *)EA_DP3_ZERO_ADJ, ErrorCount);
+				if(IsDP3Enabled())
+				{
+					GetPareValue(DP3_VAL_INDEX, &senVal3);
+					OSWriteEEPromWord((unsigned int *)EA_DP3_ZERO_ADJ, -senVal3.convertedValue);
+				}
 				
-				DPautocale = 1;
+				DPautocal = 1;
 			}
 				
 			displayPage1 = 4;
@@ -911,7 +917,7 @@ void UserInterfaceTask( void )
 		else
 		{
 			displayPage1 = 0;
-			DPautocale = 0;
+			DPautocal = 0;
 		}
 		return;//continue;
 	}
@@ -1263,16 +1269,6 @@ void DisplaySensorValues(void)
 		memset(displayStr,0,sizeof(displayStr));
 		memset(displayStr1,0,sizeof(displayStr1));
 		displayPage=displayPage1;
-		
-		//ks0xxx_SelectFont(ARIAL18BOLD, ks0xxx_ReadFontData, BLACK);
-		//PrintLineInBox(LEFT,5,120,120,"ID:");
-		//ks0xxx_SelectFont(Bodoni20, ks0xxx_ReadFontData, BLACK);
-		//PrintLineInBox(LEFT,30,100,120,FormatInteger (GetParameterValue( DEVICE_ID )));
-		//
-		//ks0xxx_SelectFont(ARIAL18BOLD, ks0xxx_ReadFontData, BLACK);
-		//PrintLineInBox(LEFT,60,120,120,"ROOM:");
-		//ks0xxx_SelectFont(Bodoni20, ks0xxx_ReadFontData, BLACK);
-		//PrintLineInBox(LEFT,100,100,120,FormatInteger (GetParameterValue( AHU_ID )));
 
 		ks0xxx_SelectFont(Bodoni15, ks0xxx_ReadFontData, BLACK);
 		sprintf(displayStr1,"AHU:%s",FormatInteger (GetParameterValue( AHU_ID )));
@@ -1284,35 +1280,14 @@ void DisplaySensorValues(void)
 		sprintf(displayStr1,"ID:%s",FormatInteger (GetParameterValue( DEVICE_ID )));
 		PrintLineInBox(LEFT,5,120,116,displayStr1);
 		
-		
-		//sprintf(displayStr1,"ID:%s",FormatInteger (GetParameterValue( DEVICE_ID )));
-		//PrintLineInBox(LEFT,5,120,116,displayStr1);
-		//
-		//sprintf(displayStr1,"ROOM:%s",FormatInteger (GetParameterValue( ROOM_ID )));
-		//PrintLineInBox(LEFT,50,120,116,displayStr1);
-		//
-		//sprintf(displayStr1,"AHU:%s",FormatInteger (GetParameterValue( AHU_ID )));
-		//PrintLineInBox(LEFT,50,120,130,displayStr1);
-		
-		//sprintf(displayStr1,"AHU");
-		//PrintLineInBox(LEFT,105,140,0,displayStr1);
-		//
-		//sprintf(displayStr1,"%s",FormatInteger (GetParameterValue( AHU_ID )));
-		//PrintLineInBox(LEFT,105,140,16,displayStr1);
-		
 		sprintf(displayStr1,"%s  ",(CurrentDoorStatus()==OPEN)?"OPEN":"CLOSE");
 		PrintLineInBox(LEFT,90,140,144,displayStr1);
 		
 		//---------------------------------------------------------------------
 		GetPareValue(DP1_VAL_INDEX, &senVal);
-		if( abs(senVal.convertedValue-(DP1_SENSOR_RESOLUTION_SM9543 / 2)) < GetParameterValue( DP1_ZERO_RNG ))
-		senVal.convertedValue = (DP1_SENSOR_RESOLUTION_SM9543/2);
-		//noSystemErrDisp = DisplayDP1(senVal.errorCode, senVal.convertedValue);
-		
-		value1 = senVal.convertedValue;
-		errorCode = senVal.errorCode;
-		
-		noSystemErrDisp = DisplayDP1(errorCode, value1);
+		if( abs(senVal.convertedValue) < GetParameterValue( DP1_ZERO_RNG ))
+			senVal.convertedValue = 0;		
+		noSystemErrDisp = DisplayDP1(senVal.errorCode, senVal.convertedValue);
 		//---------------------------------------------------------------------
 		GetPareValue(HUMIDITY_VAL_INDEX, &senVal);
 		PreRHvalue = senVal.convertedValue;
@@ -1594,7 +1569,7 @@ char DisplayDP1(uint8_t error, int16_t value)
 	{
 		//OSSemaTakeEver(UIMutex);
 	   
-		FormatDP(PRES_SENS_SM9543, GetParameterValue( DP1_UNIT ), value, DP1_SENSOR_RESOLUTION_SM9543, GetParameterValue(DP1_RANGE), GetParameterValue(DP1_AREA_TYPE), GetParameterValue(DP1_AREA_LENGTH), GetParameterValue(DP1_AREA_WIDTH), GetParameterValue(DP1_AREA_RADIOUS));
+		FormatDP(GetParameterValue( DP1_UNIT ), value, GetParameterValue(DP1_RANGE), GetParameterValue(DP1_AREA_TYPE), GetParameterValue(DP1_AREA_LENGTH), GetParameterValue(DP1_AREA_WIDTH), GetParameterValue(DP1_AREA_RADIOUS));
 		formatedValue[strlen(formatedValue)-1] = '\0';  // one digit less resolution then setup
 		if(formatedValue[strlen(formatedValue)-1] == '.' )
 		formatedValue[strlen(formatedValue)-1] = '\0';  // if last digit '.' remove it
@@ -1618,14 +1593,14 @@ char DisplayDP1(uint8_t error, int16_t value)
 		uint8_t length = 0;
 		memset(displayStr1,0,sizeof(displayStr1));
 		
-		FormatDP(PRES_SENS_SM9543, GetParameterValue( DP1_UNIT ), GetParameterValue( DP1_LOWER_ALARM_ON_LIMIT ), DP1_SENSOR_RESOLUTION_SM9543, GetParameterValue(DP1_RANGE), GetParameterValue(DP1_AREA_TYPE), GetParameterValue(DP1_AREA_LENGTH), GetParameterValue(DP1_AREA_WIDTH), GetParameterValue(DP1_AREA_RADIOUS));
+		FormatDP(GetParameterValue( DP1_UNIT ), GetParameterValue( DP1_LOWER_ALARM_ON_LIMIT ), GetParameterValue(DP1_RANGE), GetParameterValue(DP1_AREA_TYPE), GetParameterValue(DP1_AREA_LENGTH), GetParameterValue(DP1_AREA_WIDTH), GetParameterValue(DP1_AREA_RADIOUS));
 		formatedValue[strlen(formatedValue)-1] = '\0';  // one digit less resolution then setup
 		if(formatedValue[strlen(formatedValue)-1] == '.' )
 		formatedValue[strlen(formatedValue)-1] = '\0';  // if last digit '.' remove it
 		sprintf(displayStr1,"L%s     ",formatedValue);
 		
 		length = strlen(displayStr1);
-		FormatDP(PRES_SENS_SM9543, GetParameterValue( DP1_UNIT ), GetParameterValue( DP1_UPPER_ALARM_ON_LIMIT ), DP1_SENSOR_RESOLUTION_SM9543, GetParameterValue(DP1_RANGE), GetParameterValue(DP1_AREA_TYPE), GetParameterValue(DP1_AREA_LENGTH), GetParameterValue(DP1_AREA_WIDTH), GetParameterValue(DP1_AREA_RADIOUS));
+		FormatDP(GetParameterValue( DP1_UNIT ), GetParameterValue( DP1_UPPER_ALARM_ON_LIMIT ), GetParameterValue(DP1_RANGE), GetParameterValue(DP1_AREA_TYPE), GetParameterValue(DP1_AREA_LENGTH), GetParameterValue(DP1_AREA_WIDTH), GetParameterValue(DP1_AREA_RADIOUS));
 		formatedValue[strlen(formatedValue)-1] = '\0';  // one digit less resolution then setup
 		if(formatedValue[strlen(formatedValue)-1] == '.' )
 		formatedValue[strlen(formatedValue)-1] = '\0';  // if last digit '.' remove it
@@ -1646,7 +1621,7 @@ char DisplayDP2(uint8_t error, int16_t value)
 	{
 		//OSSemaTakeEver(UIMutex);
 
-		FormatDP(PRES_SENS_SM9543, GetParameterValue( DP2_UNIT ), value, DP2_SENSOR_RESOLUTION_SM9543, GetParameterValue(DP2_RANGE), GetParameterValue(DP2_AREA_TYPE), GetParameterValue(DP2_AREA_LENGTH), GetParameterValue(DP2_AREA_WIDTH), GetParameterValue(DP2_AREA_RADIOUS));
+		FormatDP(GetParameterValue( DP2_UNIT ), value, GetParameterValue(DP2_RANGE), GetParameterValue(DP2_AREA_TYPE), GetParameterValue(DP2_AREA_LENGTH), GetParameterValue(DP2_AREA_WIDTH), GetParameterValue(DP2_AREA_RADIOUS));
 		formatedValue[strlen(formatedValue)-1] = '\0';  // one digit less resolution then setup
 		if(formatedValue[strlen(formatedValue)-1] == '.' )
 		formatedValue[strlen(formatedValue)-1] = '\0';  // if last digit '.' remove it
@@ -1675,7 +1650,7 @@ char DisplayDP3(uint8_t error, int16_t value)
 	{
 		//OSSemaTakeEver(UIMutex);
 	  
-		FormatDP(PRES_SENS_SM9543, GetParameterValue( DP3_UNIT ), value, DP3_SENSOR_RESOLUTION_SM9543, GetParameterValue(DP3_RANGE), GetParameterValue(DP3_AREA_TYPE), GetParameterValue(DP3_AREA_LENGTH), GetParameterValue(DP3_AREA_WIDTH), GetParameterValue(DP3_AREA_RADIOUS));
+		FormatDP(GetParameterValue( DP3_UNIT ), value, GetParameterValue(DP3_RANGE), GetParameterValue(DP3_AREA_TYPE), GetParameterValue(DP3_AREA_LENGTH), GetParameterValue(DP3_AREA_WIDTH), GetParameterValue(DP3_AREA_RADIOUS));
 		formatedValue[strlen(formatedValue)-1] = '\0';  // one digit less resolution then setup
 		if(formatedValue[strlen(formatedValue)-1] == '.' )
 		formatedValue[strlen(formatedValue)-1] = '\0';  // if last digit '.' remove it
@@ -1803,104 +1778,20 @@ char DisplayHumidity(uint8_t error, int16_t value)
 	return noSystemErrDisp;
 }
 
-
-int16_t DP1sensorResolution(void)
-{
-	return DP1_SENSOR_RESOLUTION_SM9543;
-	
-	//if(GetParameterValue(DP1_SENS_TYPE)==PRES_SENS_SM9543)
-	//{
-		//return DP1_SENSOR_RESOLUTION_SM9543;
-	//}
-	//else
-	//{
-		//return DP1_SENSOR_RESOLUTION_OTHER;
-	//}
-	
-	//int16_t dpresolution;
-	//
-	//switch( GetParameterValue(DP1_SENS_TYPE))
-	//{
-		//case PRES_SENS_SM9543:    dpresolution = DP1_SENSOR_RESOLUTION_SM9543;		break;
-		//case PRES_SENS_AMS5812:
-		//case PRES_SENS_SM4331:
-		//case PRES_SENS_NONE:
-		//default:                  dpresolution = DP1_SENSOR_RESOLUTION;		break;
-	//}
-	//
-	//return dpresolution;
-}
-
-int16_t DP2sensorResolution(void)
-{
-	return DP2_SENSOR_RESOLUTION_SM9543;
-	
-	//if(GetParameterValue(DP2_SENS_TYPE)==PRES_SENS_SM9543)
-	//{
-		//return DP2_SENSOR_RESOLUTION_SM9543;
-	//}
-	//else
-	//{
-		//return DP2_SENSOR_RESOLUTION_OTHER;
-	//}
-	
-	//int16_t dpresolution;
-	//
-	//switch( GetParameterValue(DP2_SENS_TYPE))
-	//{
-		//case PRES_SENS_SM9543:    dpresolution = DP2_SENSOR_RESOLUTION_SM9543;		break;
-		//case PRES_SENS_AMS5812:
-		//case PRES_SENS_SM4331:
-		//case PRES_SENS_NONE:
-		//default:                  dpresolution = DP2_SENSOR_RESOLUTION;		break;
-	//}
-	//
-	//return dpresolution;
-}
-
-int16_t DP3sensorResolution(void)
-{
-	return DP3_SENSOR_RESOLUTION_SM9543;
-	
-	//if(GetParameterValue(DP3_SENS_TYPE)==PRES_SENS_SM9543)
-	//{
-		//return DP3_SENSOR_RESOLUTION_SM9543;
-	//}
-	//else
-	//{
-		//return DP3_SENSOR_RESOLUTION;
-	//}
-	//int16_t dpresolution;
-	 //
-	//switch( GetParameterValue(DP3_SENS_TYPE))
-	//{
-		//case PRES_SENS_SM9543:    dpresolution = DP3_SENSOR_RESOLUTION_SM9543;		break;
-		//case PRES_SENS_AMS5812:
-		//case PRES_SENS_SM4331:
-		//case PRES_SENS_NONE:
-		//default:                  dpresolution = DP3_SENSOR_RESOLUTION;		break;
-	//}
-	//
-	//return dpresolution;
-}
-
 //#pragma O0
 /* Converts and formats the sting for output */
-static void FormatDP(uint8_t senType, uint8_t unit, int16_t value, int16_t dpsenResolution, int16_t range1, uint8_t AreaType, int16_t length, int16_t width, int16_t radious)
+static void FormatDP(uint8_t unit, int16_t value, int16_t range1, uint8_t AreaType, int16_t length, int16_t width, int16_t radious)
 {
 	double result,range,area=1;
 	uint8_t decimal;  // minimum value is 1
 	
-	range = range1;
-	range /= 6894.7;	//(GetParameterValue(DP1_RANGE)/6895.7)  // Pa to PSI conversion
-	
-	if(senType==PRES_SENS_SM9543) value = value-(dpsenResolution / 2);
+	//range = range1;
+	//range /= 6894.7;	//(GetParameterValue(DP1_RANGE)/6895.7)  // Pa to PSI conversion
 	
 	if( unit == (uint8_t)PRESSURE_CFM )
 	{
 		if(AreaType==PRES_AREA_SQUARE)
 		{
-			//area = (length * width)/1000000;
 			area = length;
 			area *= width;
 			area /= 92903.04;
@@ -1923,83 +1814,65 @@ static void FormatDP(uint8_t senType, uint8_t unit, int16_t value, int16_t dpsen
 	{
 		if( unit == (uint8_t)PRESSURE_MILIBAR )
 		{
-			result = value * (range*68.9476) / dpsenResolution;
+			result = value * 0.01;
 			formatedUnit = PSTR("mBAR");
 			decimal = 4;
 		}
 		else if( unit == (uint8_t)PRESSURE_PA )
 		{
-			result = value * (range*6894.76) / dpsenResolution;
+			result = value;
 			formatedUnit = PSTR("Pa");
 			if( result > -0.1 && result < 0 )
 			result = 0;
 			
 			if(result<0) result=0;
-			if(result>100) result=99.9;
+			if(result>10000) result=9999;
 			
 			decimal = 2;
 		}
 		else if( unit == (uint8_t)PRESSURE_HG_INCH )
 		{
-			result = value * (range*2.03602) / dpsenResolution;
+			result = value * 0.000295299;
 			formatedUnit = PSTR("iHg");
 			decimal = 5;
 		}
 		else if( unit == (uint8_t)PRESSURE_PSF )
 		{
-			result = value * (range*144.0) / dpsenResolution;
+			result = value * 0.020885433;
 			formatedUnit = PSTR("PSF");
 			decimal = 3;
 		}
 		else if( unit == (uint8_t)PRESSURE_H2O_MM )
 		{
-			result = value * (range*703.069578295612) / dpsenResolution;
+			result = value * 0.101971621298;
 			formatedUnit = PSTR("mmH2O");
 			decimal = 3;
 		}
 		else if( unit == (uint8_t)PRESSURE_H2O_INCH )
 		{
-			result = value * (range*27.7076) / dpsenResolution;
+			result = value * 0.00401463075976;
 			formatedUnit = PSTR("iH2O");
 			decimal = 4;
 		}
 		else if( unit == (uint8_t)PRESSURE_CFM )
 		{
-			result = (4005.0 * sqrt(value * (range*27.7076) / dpsenResolution) * area);///100000;
+			result = (4005.0 * sqrt(value * 0.00401463075976) * area);
 			formatedUnit = PSTR("CFM");
-			decimal = 1;//1;
+			decimal = 1;
 		}
 		else
 		{
-			result = value * range / dpsenResolution;
+			result = value * 0.00014503773773;
 			formatedUnit = PSTR("PSI");
 			decimal = 5;
 		}
-		
-		//result=99.9;
-		
-		
 
+		result /= 100;
+		
 		dtostrf( result, sizeof(formatedValue)-1, decimal, formatedValue);
 		strcpy( formatedValue, strtrim(formatedValue));
 	}
 	return;
-}
-
-int16_t ConvertToPascal(uint8_t senType, int16_t value, int16_t dpsenResolution, int16_t range1)
-{
-	double result,range;
-	
-	range = range1;
-	range /= 6895.7;	//(GetParameterValue(DP1_RANGE)/6895.7)  // Pa to PSI conversion
-	
-	if(senType==PRES_SENS_SM9543) value = value-(dpsenResolution / 2);
-
-	result = value * (range*6894.76) / dpsenResolution;
-	if( result > -0.1 && result < 0 )
-	result = 0;
-	
-	return 	(int16_t) (result*100);
 }
 
 //#pragma Os
@@ -2208,6 +2081,18 @@ static char * FormatInteger( int16_t value)
    return NULL;
 }
 
+static char * Formatfloat( int16_t value)
+{
+	memset(displayStr,0,sizeof(displayStr));
+	
+	if (IsLCDDisplay())
+	{
+		dtostrf( (float)value/100, 4, 2, displayStr);
+		return displayStr;
+	}
+	return NULL;
+}
+
 static char * FormatVersion()
 {
     int major = SOFTWARE_VERSION/100;
@@ -2229,8 +2114,7 @@ char * FormatDP1OneLine( char * str, uint8_t error, int16_t value )
    }
    else
    {
-	   //FormatDP(GetParameterValue( DP1_SENS_TYPE ), GetParameterValue( DP1_UNIT ), value,  DP1sensorResolution(), GetParameterValue(DP1_RANGE), GetParameterValue(DP1_AREA_TYPE), GetParameterValue(DP1_AREA_LENGTH), GetParameterValue(DP1_AREA_WIDTH), GetParameterValue(DP1_AREA_RADIOUS));
-	   FormatDP(PRES_SENS_SM9543, GetParameterValue( DP1_UNIT ), value, DP1_SENSOR_RESOLUTION_SM9543, GetParameterValue(DP1_RANGE), GetParameterValue(DP1_AREA_TYPE), GetParameterValue(DP1_AREA_LENGTH), GetParameterValue(DP1_AREA_WIDTH), GetParameterValue(DP1_AREA_RADIOUS));
+	   FormatDP(GetParameterValue( DP1_UNIT ), value, GetParameterValue(DP1_RANGE), GetParameterValue(DP1_AREA_TYPE), GetParameterValue(DP1_AREA_LENGTH), GetParameterValue(DP1_AREA_WIDTH), GetParameterValue(DP1_AREA_RADIOUS));
    }
    locked_sprintf_P( str, PSTR("DP1(%S): %s"), formatedUnit, formatedValue );
    return str;
@@ -2244,8 +2128,7 @@ char * FormatDP2OneLine( char * str, uint8_t error, int16_t value )
 	}
 	else
 	{
-		//FormatDP(GetParameterValue( DP2_SENS_TYPE ), GetParameterValue( DP2_UNIT ), value,  DP2sensorResolution(), GetParameterValue(DP2_RANGE), GetParameterValue(DP2_AREA_TYPE), GetParameterValue(DP2_AREA_LENGTH), GetParameterValue(DP2_AREA_WIDTH), GetParameterValue(DP2_AREA_RADIOUS));
-		FormatDP(PRES_SENS_SM9543, GetParameterValue( DP2_UNIT ), value, DP2_SENSOR_RESOLUTION_SM9543, GetParameterValue(DP2_RANGE), GetParameterValue(DP2_AREA_TYPE), GetParameterValue(DP2_AREA_LENGTH), GetParameterValue(DP2_AREA_WIDTH), GetParameterValue(DP2_AREA_RADIOUS));
+		FormatDP(GetParameterValue( DP2_UNIT ), value, GetParameterValue(DP2_RANGE), GetParameterValue(DP2_AREA_TYPE), GetParameterValue(DP2_AREA_LENGTH), GetParameterValue(DP2_AREA_WIDTH), GetParameterValue(DP2_AREA_RADIOUS));
 	}
 
 	locked_sprintf_P( str, PSTR("DP2(%S): %s"), formatedUnit, formatedValue );
@@ -2260,8 +2143,7 @@ char * FormatDP3OneLine( char * str, uint8_t error, int16_t value )
 	}
 	else
 	{
-		//FormatDP(GetParameterValue( DP3_SENS_TYPE ), GetParameterValue( DP3_UNIT ), value,  DP3sensorResolution(), GetParameterValue(DP3_RANGE), GetParameterValue(DP3_AREA_TYPE), GetParameterValue(DP3_AREA_LENGTH), GetParameterValue(DP3_AREA_WIDTH), GetParameterValue(DP3_AREA_RADIOUS));
-		FormatDP(PRES_SENS_SM9543, GetParameterValue( DP3_UNIT ), value, DP3_SENSOR_RESOLUTION_SM9543, GetParameterValue(DP3_RANGE), GetParameterValue(DP3_AREA_TYPE), GetParameterValue(DP3_AREA_LENGTH), GetParameterValue(DP3_AREA_WIDTH), GetParameterValue(DP3_AREA_RADIOUS));
+		FormatDP(GetParameterValue( DP3_UNIT ), value, GetParameterValue(DP3_RANGE), GetParameterValue(DP3_AREA_TYPE), GetParameterValue(DP3_AREA_LENGTH), GetParameterValue(DP3_AREA_WIDTH), GetParameterValue(DP3_AREA_RADIOUS));
 	}
 
 	locked_sprintf_P( str, PSTR("DP3(%S): %s"), formatedUnit, formatedValue );
@@ -2476,6 +2358,9 @@ const PARA_INFO paraTableLCD [] PROGMEM =
 	{ DP1_RANGE,                   IsMasterReset,      IsDP1Enabled, "DP1SenRng(Pa)",   PresAbsRange  },
 	{ DP2_RANGE,                  IsMasterReset,      IsDP2Enabled,   "DP2SenRng(Pa)",     PresDiffRange  },
 	{ DP3_RANGE,                 IsMasterReset,      IsDP3Enabled,   "DP3SenRng(Pa)",    PresDiff3Range  },
+	{ DP1_SENS_TYPE,               IsMasterReset,      IsDP1Enabled, "DP1SensType",     PresAbsSensTypePara  },
+	{ DP2_SENS_TYPE,              IsMasterReset,      IsDP2Enabled,  "DP2SensType",        PresDiffSensTypePara  },
+	{ DP3_SENS_TYPE,             IsMasterReset,      IsDP3Enabled,  "DP3SensType",       PresDiff3SensTypePara  },
 	{ CUSTOMER_ID,                      NULL,                       NULL,           "CustomerID",         CustomerIDPara  },
 	{ SERIAL_NO,                        NULL,                       NULL,           "SerialNo",           SerialNoPara  },
 	{ CONFIG_SYSTEM,                    NULL,                       NULL,           "SystemConfig",       SystemConfigPara  },
@@ -4145,7 +4030,7 @@ static char * BroadcastPortPara(uint8_t operationType, int16_t * paraValue )
 
 static char * AbsPresZeroRangePara(uint8_t operationType, int16_t * paraValue )
 {
-   return ParaSetIntegerVal( operationType, paraValue, EA_DP1_ZERO_RNG, D_DP1_ZERO_RNG, MIN_DP1_ZERO_RNG, MAX_DP1_ZERO_RNG );
+   return ParaSetfloatVal( operationType, paraValue, EA_DP1_ZERO_RNG, D_DP1_ZERO_RNG, MIN_DP1_ZERO_RNG, MAX_DP1_ZERO_RNG );
 }
 
 static char * DiffPresZeroRangePara(uint8_t operationType, int16_t * paraValue )
@@ -4159,9 +4044,7 @@ static char * DiffPres3ZeroRangePara(uint8_t operationType, int16_t * paraValue 
 }
 static char * AbsPresZeroAdjustPara(uint8_t operationType, int16_t * paraValue )
 {
-   //if( operationType == PARA_DEFAULT )
-      //return FormatInteger( *paraValue );
-   return ParaSetIntegerVal( operationType, paraValue, EA_DP1_ZERO_ADJ, D_DP1_ZERO_ADJ, MIN_DP1_ZERO_ADJ, MAX_DP1_ZERO_ADJ );
+   return ParaSetfloatVal( operationType, paraValue, EA_DP1_ZERO_ADJ, D_DP1_ZERO_ADJ, MIN_DP1_ZERO_ADJ, MAX_DP1_ZERO_ADJ );
 }
 
 static char * DiffPresZeroAdjustPara(uint8_t operationType, int16_t * paraValue )
@@ -4643,80 +4526,74 @@ static char * TempRH2SensTypePara( uint8_t operationType, int16_t * paraValue )
 //}
 //
 
-//static char * PresAbsSensTypePara(uint8_t operationType, int16_t * paraValue )
-//{
-   ////ParameterOperationsSettingsRolloverNoDefault( operationType, paraValue, EA_DP1_SENS_TYPE, 0, 3 );
-	//ParameterOperationsSettingsRollover( operationType, paraValue, EA_DP1_SENS_TYPE, PRES_SENS_SM9543, 0, 3 );
-	//
-   //if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      //return NULL;
-   //if (IsLCDDisplay())
-   //{
-       //switch( *paraValue )
-       //{                  
-          //case PRES_SENS_SM4331:    locked_sprintf_P( displayStr, PSTR("SM4331"));          
-                                    //break;                                               
-          //case PRES_SENS_SM9543:    locked_sprintf_P( displayStr, PSTR("SM9543"));
-                                    //break;
-          //case PRES_SENS_AMS5812:   locked_sprintf_P( displayStr, PSTR("AMS5812"));
-                                    //break;
-          //case PRES_SENS_NONE: 
-          //default:                  locked_sprintf_P( displayStr, PSTR("NONE"));
-                                    //break;
-       //}
-   //}
-   //return displayStr;
-//}
-//
-//static char * PresDiffSensTypePara(uint8_t operationType, int16_t * paraValue )
-//{
-    ////ParameterOperationsSettingsRolloverNoDefault( operationType, paraValue, EA_DP2_SENS_TYPE, 0, 3 );
-	//ParameterOperationsSettingsRollover( operationType, paraValue, EA_DP2_SENS_TYPE, PRES_SENS_SM9543, 0, 3 );
-	//
-    //if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-       //return NULL;
-    //if (IsLCDDisplay())
-    //{
-        //switch( *paraValue )
-        //{                                               
-           //case PRES_SENS_SM4331:    locked_sprintf_P( displayStr, PSTR("SM4331"));          
-                                     //break;                                               
-           //case PRES_SENS_SM9543:    locked_sprintf_P( displayStr, PSTR("SM9543"));
-                                     //break;
-           //case PRES_SENS_AMS5812:   locked_sprintf_P( displayStr, PSTR("AMS5812"));
-                                     //break;
-           //case PRES_SENS_NONE: 
-           //default:                  locked_sprintf_P( displayStr, PSTR("NONE"));
-                                     //break;
-        //}
-    //}
-    //return displayStr;
-//}
-//
-//static char * PresDiff3SensTypePara(uint8_t operationType, int16_t * paraValue )
-//{
-	////ParameterOperationsSettingsRolloverNoDefault( operationType, paraValue, EA_DP3_SENS_TYPE, 0, 3 );
-	//ParameterOperationsSettingsRollover( operationType, paraValue, EA_DP3_SENS_TYPE, PRES_SENS_SM9543, 0, 3 );
-	//
-	//if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	//return NULL;
-	//if (IsLCDDisplay())
-	//{
-		//switch( *paraValue )
-		//{
-			//case PRES_SENS_SM4331:    locked_sprintf_P( displayStr, PSTR("SM4331"));
-			//break;
-			//case PRES_SENS_SM9543:    locked_sprintf_P( displayStr, PSTR("SM9543"));
-			//break;
-			//case PRES_SENS_AMS5812:   locked_sprintf_P( displayStr, PSTR("AMS5812"));
-			//break;
-			//case PRES_SENS_NONE:
-			//default:                  locked_sprintf_P( displayStr, PSTR("NONE"));
-			//break;
-		//}
-	//}
-	//return displayStr;
-//}
+static char * PresAbsSensTypePara(uint8_t operationType, int16_t * paraValue )
+{
+   //ParameterOperationsSettingsRolloverNoDefault( operationType, paraValue, EA_DP1_SENS_TYPE, 0, 3 )
+	ParameterOperationsSettingsRollover( operationType, paraValue, EA_DP1_SENS_TYPE, PRES_SENS_SM9543, 0, 2 );
+	
+   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
+      return NULL;
+   if (IsLCDDisplay())
+   {
+       switch( *paraValue )
+       {                  
+          case PRES_SENS_SM9543:    locked_sprintf_P( displayStr, PSTR("SM9543"));
+                                    break;
+          case PRES_SENS_XGZP6891D:   locked_sprintf_P( displayStr, PSTR("XGZP6891D"));
+                                    break;
+          case PRES_SENS_NONE: 
+          default:                  locked_sprintf_P( displayStr, PSTR("NONE"));
+                                    break;
+       }
+   }
+   return displayStr;
+}
+
+static char * PresDiffSensTypePara(uint8_t operationType, int16_t * paraValue )
+{
+    //ParameterOperationsSettingsRolloverNoDefault( operationType, paraValue, EA_DP2_SENS_TYPE, 0, 3 );
+	ParameterOperationsSettingsRollover( operationType, paraValue, EA_DP2_SENS_TYPE, PRES_SENS_SM9543, 0, 2);
+	
+    if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
+       return NULL;
+    if (IsLCDDisplay())
+    {
+        switch( *paraValue )
+        {                                               
+           case PRES_SENS_SM9543:    locked_sprintf_P( displayStr, PSTR("SM9543"));
+                                     break;
+           case PRES_SENS_XGZP6891D:   locked_sprintf_P( displayStr, PSTR("XGZP6891D"));
+                                     break;
+           case PRES_SENS_NONE: 
+           default:                  locked_sprintf_P( displayStr, PSTR("NONE"));
+                                     break;
+        }
+    }
+    return displayStr;
+}
+
+static char * PresDiff3SensTypePara(uint8_t operationType, int16_t * paraValue )
+{
+	//ParameterOperationsSettingsRolloverNoDefault( operationType, paraValue, EA_DP3_SENS_TYPE, 0, 3 );
+	ParameterOperationsSettingsRollover( operationType, paraValue, EA_DP3_SENS_TYPE, PRES_SENS_SM9543, 0, 2 );
+	
+	if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
+	return NULL;
+	if (IsLCDDisplay())
+	{
+		switch( *paraValue )
+		{
+			case PRES_SENS_SM9543:    locked_sprintf_P( displayStr, PSTR("SM9543"));
+			break;
+			case PRES_SENS_XGZP6891D:   locked_sprintf_P( displayStr, PSTR("XGZP6891D"));
+			break;
+			case PRES_SENS_NONE:
+			default:                  locked_sprintf_P( displayStr, PSTR("NONE"));
+			break;
+		}
+	}
+	return displayStr;
+}
 
 static char * DP1AreaTypePara(uint8_t operationType, int16_t * paraValue )
 {
@@ -5262,6 +5139,19 @@ static char * ParaSetIntegerVal(uint8_t operationType, int16_t * paraValue, unsi
    return FormatInteger(*paraValue);
 }
 
+static char * ParaSetfloatVal(uint8_t operationType, int16_t * paraValue, unsigned int eepromAddr, int16_t dfltVal, int16_t minVal, int16_t maxVal )
+{
+	ParameterOperationsSettings( operationType, paraValue, eepromAddr, dfltVal, minVal, maxVal );
+	if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
+	return NULL;
+	
+	if( operationType == (uint8_t)PARA_DEFAULT )
+	*paraValue = dfltVal;
+	
+	return Formatfloat(*paraValue);
+}
+
+
 static char * ParaSetIntegerVal1(uint8_t operationType, int16_t * paraValue, unsigned int eepromAddr, int16_t dfltVal, int16_t minVal, int16_t maxVal )
 {
 	ParameterOperationsSettings( operationType, paraValue, eepromAddr, dfltVal, minVal, maxVal );
@@ -5334,83 +5224,71 @@ void BuzzerOff()
 
 int d_pres_abs_upper_alarm_off_limit()
 { 
-	return ((DP1_SENSOR_RESOLUTION_SM9543/2) + ((DP1_SENSOR_RESOLUTION_SM9543 * 14.9) / GetParameterValue(DP1_RANGE)));
-	//return ((DP1_SENSOR_RESOLUTION_SM9543/2) + 245);
+	return 1490;
 }
 int d_pres_abs_upper_alarm_on_limit()       
 {  
-	return ((DP1_SENSOR_RESOLUTION_SM9543/2) + ((DP1_SENSOR_RESOLUTION_SM9543 * 15.1) / GetParameterValue(DP1_RANGE)));
-	//return ((DP1_SENSOR_RESOLUTION_SM9543/2) + 262);
+	return 1510;
 }
              
 int d_pres_abs_lower_alarm_off_limit()      
 {  
-	return ((DP1_SENSOR_RESOLUTION_SM9543/2) + ((DP1_SENSOR_RESOLUTION_SM9543 * 5.1) / GetParameterValue(DP1_RANGE)));
-	//return ((DP1_SENSOR_RESOLUTION_SM9543/2) + 82);
+	return 510;
 }
 
 int d_pres_abs_lower_alarm_on_limit()       
 {  
-	return ((DP1_SENSOR_RESOLUTION_SM9543/2) + ((DP1_SENSOR_RESOLUTION_SM9543 * 4.9) / GetParameterValue(DP1_RANGE)));
-	//return ((DP1_SENSOR_RESOLUTION_SM9543/2) + 65);
+	return 490;
 }
              
 int d_pres_diff_upper_alarm_off_limit()     
 {  
-   return ((DP2_SENSOR_RESOLUTION_SM9543/2) + ((DP2_SENSOR_RESOLUTION_SM9543 * 14.9) / GetParameterValue(DP2_RANGE)));
-   //return ((DP2_SENSOR_RESOLUTION_SM9543/2) + 245);
+   return 1490;
 }
              
 int d_pres_diff_upper_alarm_on_limit()      
 {  
-   return ((DP2_SENSOR_RESOLUTION_SM9543/2) + ((DP2_SENSOR_RESOLUTION_SM9543 * 15.1) / GetParameterValue(DP2_RANGE)));
-   //return ((DP2_SENSOR_RESOLUTION_SM9543/2) + 262);
+   return 1510;
 }
              
 int d_pres_diff_lower_alarm_off_limit()     
 {  
-   return ((DP2_SENSOR_RESOLUTION_SM9543/2) + ((DP2_SENSOR_RESOLUTION_SM9543 * 5.1) / GetParameterValue(DP2_RANGE)));
-   //return ((DP2_SENSOR_RESOLUTION_SM9543/2) + 82);
+   return 510;
 }
             
 int d_pres_diff_lower_alarm_on_limit()      
 {  
-   return ((DP2_SENSOR_RESOLUTION_SM9543/2) + ((DP2_SENSOR_RESOLUTION_SM9543 * 4.9) / GetParameterValue(DP2_RANGE)));
-   //return ((DP2_SENSOR_RESOLUTION_SM9543/2) + 65);
+   return 490;
 }
 
 int d_pres_diff3_upper_alarm_off_limit()
 {
-	return ((DP3_SENSOR_RESOLUTION_SM9543/2) + ((DP3_SENSOR_RESOLUTION_SM9543 * 14.9) / GetParameterValue(DP3_RANGE)));
-	//return ((DP3_SENSOR_RESOLUTION_SM9543/2) + 245);
+	return 1490;
 }
 
 int d_pres_diff3_upper_alarm_on_limit()
 {
-	return ((DP3_SENSOR_RESOLUTION_SM9543/2) + ((DP3_SENSOR_RESOLUTION_SM9543 * 15.1) / GetParameterValue(DP3_RANGE)));
-	//return ((DP3_SENSOR_RESOLUTION_SM9543/2) + 262);
+	return 1510;
 }
 
 int d_pres_diff3_lower_alarm_off_limit()
 {
-	return ((DP3_SENSOR_RESOLUTION_SM9543/2) + ((DP3_SENSOR_RESOLUTION_SM9543 * 5.1) / GetParameterValue(DP3_RANGE)));
-	//return ((DP3_SENSOR_RESOLUTION_SM9543/2) + 82);
+	return 510;
 }
 
 int d_pres_diff3_lower_alarm_on_limit()
 {
-	return ((DP3_SENSOR_RESOLUTION_SM9543/2) + ((DP3_SENSOR_RESOLUTION_SM9543 * 4.9) / GetParameterValue(DP3_RANGE)));
-	//return ((DP3_SENSOR_RESOLUTION_SM9543/2) + 65);
+	return 490;
 }
 
 int d_pres_abs_pid_setpoint_limit()
 {
-	return ((DP1_SENSOR_RESOLUTION_SM9543/2) + ((DP1_SENSOR_RESOLUTION_SM9543 * 5.0) / GetParameterValue(DP1_RANGE)));
+	return 500;
 }
 
 int d_pres_diff_pid_setpoint_limit()
 {
-	return ((DP2_SENSOR_RESOLUTION_SM9543/2) + ((DP2_SENSOR_RESOLUTION_SM9543 * 5.0) / GetParameterValue(DP2_RANGE)));
+	return 500;
 }
 
             
@@ -5486,26 +5364,22 @@ int d_part_nox_upper_alarm_on_limit()
 
 int d_pres_abs_out_low_pres()               
 {  
-	return ((DP1_SENSOR_RESOLUTION_SM9543/2) + ((DP1_SENSOR_RESOLUTION_SM9543 * 5.0) / GetParameterValue(DP1_RANGE)));
-   //return 0;//return -DP1_SENSOR_RESOLUTION_SM9543;
+	return 500;
 }
              
 int d_pres_abs_out_high_pres()              
 {
-	return ((DP1_SENSOR_RESOLUTION_SM9543/2) + ((DP1_SENSOR_RESOLUTION_SM9543 * 10.0) / GetParameterValue(DP1_RANGE)));  
-   //return DP1_SENSOR_RESOLUTION_SM9543;
+   return 1000;
 }
              
 int d_pres_diff_out_low_pres()             
 {  
-	return ((DP2_SENSOR_RESOLUTION_SM9543/2) + ((DP2_SENSOR_RESOLUTION_SM9543 * 5.0) / GetParameterValue(DP2_RANGE)));
-   //return 0;//return -DP2_SENSOR_RESOLUTION_SM9543;
+	return 500;
 }
              
 int d_pres_diff_out_high_pres()             
 {  
-	return ((DP2_SENSOR_RESOLUTION_SM9543/2) + ((DP2_SENSOR_RESOLUTION_SM9543 * 10.0) / GetParameterValue(DP2_RANGE)));
-   //return DP2_SENSOR_RESOLUTION_SM9543;
+	return 1000;
 }
              
 int d_temp_out_low_temp()                   
@@ -5596,17 +5470,17 @@ int min_part_nox_upper_alarm_off_limit()
 
 int min_abs_pres_zero_adj()                 
 {  
-   return -DP1_SENSOR_RESOLUTION_SM9543;
+   return -10000;
 }
                 
 int min_diff_pres_zero_adj()                
 {  
-   return -DP2_SENSOR_RESOLUTION_SM9543;
+   return -10000;
 }
 
 int min_diff_pres3_zero_adj()
 {
-	return -DP3_SENSOR_RESOLUTION_SM9543;
+	return -10000;
 }
                 
 int min_temp_zero_adj()                     
@@ -5642,32 +5516,32 @@ int min_rh_out_low_rh()
     
 int max_pres_abs_upper_alarm_on_limit()     
 {  
-   return DP1_SENSOR_RESOLUTION_SM9543;
+   return 10000;
 }
 
 int max_pres_abs_lower_alarm_off_limit()    
 {  
-   return DP1_SENSOR_RESOLUTION_SM9543;
+   return 10000;
 }
 
 int max_pres_diff_upper_alarm_on_limit()    
 {  
-   return DP2_SENSOR_RESOLUTION_SM9543;
+   return 10000;
 }
 
 int max_pres_diff_lower_alarm_off_limit()   
 {  
-   return DP2_SENSOR_RESOLUTION_SM9543;
+   return 10000;
 }
 
 int max_pres_diff3_upper_alarm_on_limit()
 {
-	return DP3_SENSOR_RESOLUTION_SM9543;
+	return 10000;
 }
 
 int max_pres_diff3_lower_alarm_off_limit()
 {
-	return DP3_SENSOR_RESOLUTION_SM9543;
+	return 10000;
 }
 
 int max_temp_upper_alarm_on_limit()         
@@ -5707,32 +5581,32 @@ int max_part_nox_upper_alarm_on_limit()
 
 int max_abs_pres_zero_rng()                 
 {  
-   return DP1_SENSOR_RESOLUTION_SM9543;
+   return 10000;
 }
                 
 int max_diff_pres_zero_rng()                
 {  
-   return DP2_SENSOR_RESOLUTION_SM9543;
+   return 10000;
 }
                 
 int max_diff_pres3_zero_rng()
 {
-	return DP3_SENSOR_RESOLUTION_SM9543;
+	return 10000;
 }
  
 int max_abs_pres_zero_adj()                 
 {  
-   return DP1_SENSOR_RESOLUTION_SM9543;
+   return 10000;
 }
                 
 int max_diff_pres_zero_adj()                
 {  
-   return DP2_SENSOR_RESOLUTION_SM9543;
+   return 10000;
 }
 
 int max_diff_pres3_zero_adj()
 {
-	return DP3_SENSOR_RESOLUTION_SM9543;
+	return 10000;
 }
                 
 int max_temp_zero_adj()                     
@@ -5748,12 +5622,12 @@ int max_rh_zero_adj()
 
 int max_pres_abs_out_high_pres()            
 {  
-   return DP1_SENSOR_RESOLUTION_SM9543;
+   return 10000;
 }
 
 int max_pres_diff_out_high_pres()           
 {  
-   return DP2_SENSOR_RESOLUTION_SM9543;
+   return 10000;
 }
 
 int max_temp_out_high_temp()                

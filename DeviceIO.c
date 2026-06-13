@@ -98,7 +98,7 @@ void DEVICEIO_FUNC_NAME( void )
 
 	if (IsDP1Enabled())
 	{
-		retVal = GetSensorDP1_SM9543( &value );
+		retVal = GetSensorDP1( &value );
 		  
 		// Convert the value to PSI
 		convertedValue = value + GetParameterValue(DP1_ZERO_ADJ);
@@ -132,7 +132,7 @@ void DEVICEIO_FUNC_NAME( void )
 		
 	if (IsDP2Enabled())
 	{
-		retVal = GetSensorDP2_SM9543( &value );
+		retVal = GetSensorDP2( &value );
 		 
 		// Convert the value to PSI
 		convertedValue = value + GetParameterValue(DP2_ZERO_ADJ);
@@ -166,7 +166,7 @@ void DEVICEIO_FUNC_NAME( void )
 	  
 	if (IsDP3Enabled())
 	{
-		retVal = GetSensorDP3_SM9543( &value );
+		retVal = GetSensorDP3( &value );
 
 		// Convert the value to PSI
 		convertedValue = value + GetParameterValue(DP3_ZERO_ADJ);		
