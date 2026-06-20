@@ -2370,7 +2370,7 @@ const PARA_INFO paraTableLCD [] PROGMEM =
 	
 	{ SOFT_VERSION,                     NULL,                       NULL,           "Version",            VersionPara },
 	
-	//{ TEMP_RH_SENS_TYPE,                IsMasterReset,      IsTempOrRHEnabled,      "Temp/RH Sens type",  TempRHSensTypePara  },	
+	{ TEMP_RH_SENS_TYPE,                IsMasterReset,      IsTempOrRHEnabled,      "Temp/RH Sens type",  TempRHSensTypePara  },	
 	{ SERIAL_BAUD_RATE_VAL,             IsMasterReset,      IsSerialEnabled,        "Serial Baudrate",    SerialBaudratePara  },
 	{ SERIAL_DATA_STOP_PARITY_VAL,      IsMasterReset,      IsSerialEnabled,        "Ser D:St:Par Bits",  SerialDataStopParityPara },
 		
