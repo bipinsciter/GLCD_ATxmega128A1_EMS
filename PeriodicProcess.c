@@ -14,10 +14,39 @@ static int buzzerSpan, buzzerOnTime, buzzerTimeCounter, buzzerDisableTime, oldBu
 
 void PERIODIC_FUNC_NAME( void )
 {
-	if(!gu8_IsLCDDisable) 
+	static uint16_t DoorOpenAlarmTimer = 0;
+	
+	if(CurrentDoorStatus()==OPEN)
+	{
+		if(GetParameterValue( DOOR_ALARM_TIME ))
+		{
+			if(DoorOpenAlarmTimer<60000)DoorOpenAlarmTimer++;
+			if(DoorOpenAlarmTimer >= GetParameterValue( DOOR_ALARM_TIME ))
+			{
+				OUTPUT1_LOW;
+				OUTPUT2_LOW;
+				OUTPUT3_LOW;
+				OUTPUT4_LOW;
+				setDooralarm();
+			}
+		}
+	}
+	else
+	{
+		OUTPUT1_HIGH;
+		OUTPUT2_HIGH;
+		OUTPUT3_HIGH;
+		OUTPUT4_HIGH;
+		
+		clearDooralarm();
+		DoorOpenAlarmTimer = 0;
+	}
+	
+	if(!gu8_IsLCDDisable)
 	{
 		DisplaySensorValues();
 	}
+	
 	
 	if(u8_resetTimer)
 	{

@@ -76,6 +76,17 @@
       <ToolName>Atmel-ICE</ToolName>
     </com_atmel_avrdbg_tool_atmelice>
     <avrtoolinterfaceclock>4000000</avrtoolinterfaceclock>
+    <custom>
+      <ToolOptions xmlns="">
+        <InterfaceProperties>
+        </InterfaceProperties>
+        <InterfaceName>PDI</InterfaceName>
+      </ToolOptions>
+      <ToolType xmlns="">custom</ToolType>
+      <ToolNumber xmlns="">
+      </ToolNumber>
+      <ToolName xmlns="">Custom Programming Tool</ToolName>
+    </custom>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'default' ">
     <OutputPath>bin\default\</OutputPath>
@@ -133,9 +144,9 @@
     </ToolchainSettings>
     <BuildTarget>all</BuildTarget>
     <CleanTarget>clean</CleanTarget>
-    <OutputFileName>TPRM_V2_9_4_BareMetal_NewFont</OutputFileName>
-    <OutputFileExtension>.elf</OutputFileExtension>
-    <OutputType>Executable</OutputType>
+    <OutputFileName>libTPRM_V2_9_5_BareMetal_NewFont</OutputFileName>
+    <OutputFileExtension>.a</OutputFileExtension>
+    <OutputType>StaticLibrary</OutputType>
   </PropertyGroup>
   <Import Project="$(AVRSTUDIO_EXE_PATH)\\Vs\\Compiler.targets" />
   <ItemGroup>

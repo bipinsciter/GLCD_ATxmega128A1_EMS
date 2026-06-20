@@ -630,6 +630,7 @@ static char * Temp2ZeroAdjustPara(uint8_t operationType, int16_t * paraValue );
 static char * TempDiffAlarmPara(uint8_t operationType, int16_t * paraValue );
 static char * TempFireAlmSetPara(uint8_t operationType, int16_t * paraValue );
 static char * TempFireAlmTimePara(uint8_t operationType, int16_t * paraValue );
+static char * DoorAlmTimePara(uint8_t operationType, int16_t * paraValue );
 static char * ConfigPasswordPara(uint8_t operationType, int16_t * paraValue );
 //static char * LogggingIntervalPara(uint8_t operationType, int16_t * paraValue );
 static char * DeviceIdPara(uint8_t operationType, int16_t * paraValue );
@@ -1235,32 +1236,32 @@ void DisplaySensorValues(void)
 				else
 				{
 					PrintLineInBoxWOClear(CENTER,0,GLCD_PIXEL_X-1,40,"< FIRE DETECTED >");
-					//PrintLineInBoxWOClear(CENTER,0,GLCD_PIXEL_X-1,60,"< DOOR OPEN >");
+				    //PrintLineInBoxWOClear(CENTER,0,GLCD_PIXEL_X-1,60,"< DOOR OPEN >");
 				}
 			}
 			
-			if(GetParameterValue(OUTPUT1_MAPPING)==OUTPUT1_NORMAL)
-			{
-				OUTPUT1_HIGH;
-			}
-			else
-			{
-				OUTPUT1_LOW;
-			}
+			//if(GetParameterValue(OUTPUT1_MAPPING)==OUTPUT1_NORMAL)
+			//{
+				//OUTPUT1_HIGH;
+			//}
+			//else
+			//{
+				//OUTPUT1_LOW;
+			//}
 
 			clear=1;
 			return;
 		}
 		else
 		{
-			if(GetParameterValue(OUTPUT1_MAPPING)==OUTPUT1_NORMAL)
-			{
-				OUTPUT1_LOW;
-			}
-			else
-			{
-				OUTPUT1_HIGH;
-			}
+			//if(GetParameterValue(OUTPUT1_MAPPING)==OUTPUT1_NORMAL)
+			//{
+				//OUTPUT1_LOW;
+			//}
+			//else
+			//{
+				//OUTPUT1_HIGH;
+			//}
 		}
 
 		if(displayPage1==4)
@@ -2227,6 +2228,7 @@ const PARA_INFO paraTableLCD [] PROGMEM =
 	{ DEVICE_ID,                        IsSerialEnabled,    NULL,                   "Device ID",          DeviceIdPara  },
 	{ TEMP_FIRE_ALM_SET,                IsTemperatureEnabled,       NULL,           "FireAlmSet",   TempFireAlmSetPara  },
 	{ TEMP_FIRE_ALM_TIME,                 IsTemperatureEnabled,       NULL,           "FireTimeSet(Sec)",  TempFireAlmTimePara  },
+	{ DOOR_ALARM_TIME,                 NULL,       NULL,           "DoorAlmTime(Sec)",  DoorAlmTimePara  },
 		
 	{ DP1_UNIT,					   IsDP1Enabled,  NULL,           "DP1 Unit",           PressureAbsUnitPara  },
 	{ DP1_AREA_TYPE,               IsMasterReset, IsDP1CFMEnabled,				"DP1 AREA TYPE",     DP1AreaTypePara  },
@@ -2254,7 +2256,6 @@ const PARA_INFO paraTableLCD [] PROGMEM =
 	{ DP1_OUT_LOW_COUNT,           IsPresAbsOutActive,  IsAlalogOutEnabled,    "DP1 OutCntMin",    OutputCountsForPresAbsMinimumPara  },
 	{ DP1_OUT_HIGH_COUNT,          IsPresAbsOutActive,  IsAlalogOutEnabled,    "DP1 OutCntMax",    OutputCountsForPresAbsMaximumPara  },
 	
-		
 	{ DP2_UNIT,						IsDP2Enabled,      NULL,           "DP2 Unit",           PressureDiffUnitPara  },
 	{ DP2_AREA_TYPE,               IsMasterReset, IsDP2CFMEnabled,				"DP2 AREA TYPE",     DP2AreaTypePara  },
 	{ DP2_AREA_LENGTH,             IsMasterReset, IsDP2CFMAreaSquare,				"DP2 AREA LENGTH",   DP2AreaLengthPara  },
@@ -4180,6 +4181,12 @@ static char * TempFireAlmTimePara(uint8_t operationType, int16_t * paraValue )
 {
 	return ParaSetIntegerVal( operationType, paraValue, EA_TEMP_FIRE_TIME_SET, 60, 15, 3600 );
 }
+
+static char * DoorAlmTimePara(uint8_t operationType, int16_t * paraValue )
+{
+	return ParaSetIntegerVal( operationType, paraValue, EA_DOOR_ALM_TIME_SET, 60, 0, 3600 );
+}
+
 
 static char * VersionPara(uint8_t operationType, int16_t * paraValue )
 {

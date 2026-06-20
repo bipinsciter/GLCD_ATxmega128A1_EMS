@@ -84,11 +84,8 @@
 #define LED_ALM4_ON			PORTA_OUTCLR = _BV(4)
 #define LED_ALM4_DIR_OUT	PORTA_DIRSET = _BV(4)
 
-
 #define CLOSE	0
 #define OPEN	1
-
-extern uint8_t dp_sw_factor_add[3];
 
 typedef struct
 {
@@ -157,6 +154,8 @@ typedef union
 #define HUMIDITY2_VAL_INDEX          6
 #define TOTAL_VAL_INDEX      7
 
+extern uint8_t dp_sw_factor_add[3];
+
 void DeviceIOInit();
 void DEVICEIO_FUNC_NAME( void );
 void TEMPRHIO_FUNC_NAME( void );
@@ -181,9 +180,10 @@ unsigned int AlarmActive_Buzzer();
 void SetBuzzerSuppressionReq();
 int GetAndResetBuzzerSuppressionReq();
 uint8_t CurrentDoorStatus(void);
-
 extern void clearDp1ManpPara(void);
 extern void clearDp2ManpPara(void);
 extern void clearDp3ManpPara(void);
+extern void setDooralarm(void);
+extern void clearDooralarm(void);
 
 #endif

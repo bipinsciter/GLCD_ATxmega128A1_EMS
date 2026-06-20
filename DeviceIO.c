@@ -83,6 +83,17 @@ static SENSOR_VALUE senVal;
    Device IO Task
 */
 
+void setDooralarm(void)
+{
+	alarmOut.alarm.door=1;
+}
+
+void clearDooralarm(void)
+{
+	alarmOut.alarm.door=0;
+}
+
+
 #define DP_SW_FACT_DIVISION		10
 static int16_t su16_dpAlmdiff[3]={0},su16_convertedValue[3]={0},LastDPManpThreshold[3]={0},LastDPManLimit[3]={0};
 static uint8_t gu8_dp_sw_factor_add_cnt[3]={0};
@@ -562,6 +573,7 @@ void DEVICEIO_FUNC_NAME( void )
 	}
 
 	//LED_PORT = ~ledState.ledByte;
+	if(ledState.led.humidityAlarm) LED_HUM_ALM_ON; else LED_HUM_ALM_OFF;
 	if(ledState.led.absPressOk) LED_ABD_PRES_OK_ON; else LED_ABD_PRES_OK_OFF;
 	if(ledState.led.absPressAlarm) LED_ABD_PRES_ALM_ON; else LED_ABD_PRES_ALM_OFF;
 	if(ledState.led.diffPressOk) LED_DP2_OK_ON; else LED_DP2_OK_OFF;
@@ -717,7 +729,7 @@ void DEVICEIO_FUNC_NAME( void )
 		}
 	}
 		
-	DoIOPortMapping();
+	//DoIOPortMapping();
 
 	//OSSleep( 100 );
 }
@@ -853,15 +865,6 @@ void TEMPRHIO_FUNC_NAME( void )
 	uint8_t retVal = -1, checkSum;
 	unsigned int value, value1;
 	int convertedValue;
-
-	/*if(CurrentDoorStatus()==OPEN)
-	{
-		alarmOut.alarm.door=1;
-	}
-	else
-	{
-		alarmOut.alarm.door=0;
-	}*/
 		
 	if( GetParameterValue(TEMP_RH_SENS_TYPE) == TEMP_RH_SENS_SHT25 )
 	{
@@ -1092,19 +1095,19 @@ void DeviceIOInit()
    LED_HUM_OK_DIR_OUT;
    LED_HUM_ALM_DIR_OUT;
    
-   OUTPUT_PORT_DIR = 0xFF;  // As outputs
-   
-   uint16_t Output;
-   
-   Output = OSReadEEPromWord((unsigned int *)EA_OUTPUT);
-   if(Output > 0x0F)
-   {
-	   
-   }
-   else
-   {
-	   SetOutput( (uint8_t)Output, (uint8_t*)&Output );
-   }
+   //OUTPUT_PORT_DIR = 0xFF;  // As outputs
+   //
+   //uint16_t Output;
+   //
+   //Output = OSReadEEPromWord((unsigned int *)EA_OUTPUT);
+   //if(Output > 0x0F)
+   //{
+	   //
+   //}
+   //else
+   //{
+	   //SetOutput( (uint8_t)Output, (uint8_t*)&Output );
+   //}
    
    //OUTPUT_PORT = 0xE0;      // set high
 
