@@ -457,7 +457,7 @@ void Reset_Init(void)
 }
 
 
-uint8_t ms50=0,DPTimer=0,TRTimer=0,PerodicTimer=0;
+uint8_t ms50=0,DPTimer=0,TRTimer=0,PerodicTimer=0,DPAddTimer=0;
 
 int main(void)                 // Main runs under the AvrX Stack
 {
@@ -530,7 +530,7 @@ int main(void)                 // Main runs under the AvrX Stack
 			UserInterfaceTask();	//50 msec
 			
 			DPTimer++;
-			if(DPTimer>=2)
+			if(DPTimer>=5)
 			{
 				DEVICEIO_FUNC_NAME();	//100 msec
 				DPTimer=0;
@@ -558,7 +558,17 @@ int main(void)                 // Main runs under the AvrX Stack
 					OSWriteEEPromWord((unsigned int *)eeprom_address, eeprom_value);
 				}
 			}
-
+			
+			DPAddTimer++;
+			if(DPAddTimer>5)
+			{
+				dp_sw_factor_add[0]=1;
+				dp_sw_factor_add[1]=1;
+				dp_sw_factor_add[2]=1;
+				
+				DPAddTimer=0;
+			}
+			
 			ms50=0;
 		}
 	}

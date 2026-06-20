@@ -181,6 +181,12 @@
 #define EA_SERIAL_NO                             (303*2)
 #define EA_ROOM_ID								 (304*2)
 #define EA_BROADCAST_PORT	                     (305*2) 
+#define EA_DP1_MANP_THRESHOLD                    (306*2) 
+#define EA_DP1_MANP_MAX_LIMIT                    (307*2) 
+#define EA_DP2_MANP_THRESHOLD                    (308*2)
+#define EA_DP2_MANP_MAX_LIMIT                    (309*2)
+#define EA_DP3_MANP_THRESHOLD                    (310*2)
+#define EA_DP3_MANP_MAX_LIMIT                    (311*2)
 
 #endif
 

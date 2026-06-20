@@ -93,9 +93,9 @@
 #define D_DP3_ZERO_ADJ                  0              
 #define D_TEMP_ZERO_ADJ                 0                
 #define D_RH_ZERO_ADJ                   0  
-#define D_DP1_RANGE						1220
-#define D_DP2_RANGE						1220
-#define D_DP3_RANGE						1220
+#define D_DP1_RANGE						10000
+#define D_DP2_RANGE						10000
+#define D_DP3_RANGE						10000
               
 #define D_BROADCAST_INTERVAL            120   
 #define D_BROADCAST_PORT	            0           
@@ -614,6 +614,12 @@ static char * HumidityUnitPara( uint8_t operationType, int16_t * paraValue );
 static char * HumidityZeroAdjustPara(uint8_t operationType, int16_t * paraValue );
 static char * Humidity2ZeroAdjustPara(uint8_t operationType, int16_t * paraValue );
 static char * AbsPresZeroRangePara(uint8_t operationType, int16_t * paraValue );
+static char * AbsPresManpThPara(uint8_t operationType, int16_t * paraValue );
+static char * AbsPresManpLmtPara(uint8_t operationType, int16_t * paraValue );
+static char * DiffPresManpThPara(uint8_t operationType, int16_t * paraValue );
+static char * DiffPresManpLmtPara(uint8_t operationType, int16_t * paraValue );
+static char * DiffPres3ManpThPara(uint8_t operationType, int16_t * paraValue );
+static char * DiffPres3ManpLmtPara(uint8_t operationType, int16_t * paraValue );
 static char * DiffPresZeroRangePara(uint8_t operationType, int16_t * paraValue );
 static char * DiffPres3ZeroRangePara(uint8_t operationType, int16_t * paraValue );
 static char * AbsPresZeroAdjustPara(uint8_t operationType, int16_t * paraValue );
@@ -1832,10 +1838,11 @@ static void FormatDP(uint8_t unit, int16_t value, int16_t range1, uint8_t AreaTy
 			if( result > -0.1 && result < 0 )
 			result = 0;
 			
-			if(result<0) result=0;
-			if(result>10000) result=9999;
+			if(result<-range1) result=-(range1-1);
+			if(result>range1) result=(range1-1);
 			
-			decimal = 2;
+			if((result<10000) && (result>-10000)) 	decimal = 2;
+			else decimal = 1;
 		}
 		else if( unit == (uint8_t)PRESSURE_HG_INCH )
 		{
@@ -2228,6 +2235,8 @@ const PARA_INFO paraTableLCD [] PROGMEM =
 	{ DP1_AREA_RADIOUS,            IsMasterReset, IsDP1CFMAreaRound,				"DP1 AREA RAD",  DP1AreaRadiousPara  },
 	{ DP1_ZERO_RNG,                IsDP1Enabled,  NULL,								"DP1 ZeroRngCnt",   AbsPresZeroRangePara  },
 	{ DP1_ZERO_ADJ,                IsDP1Enabled,  NULL,								"DP1 ZeroAdjCnt",   AbsPresZeroAdjustPara  },
+	{ DP1_MANP_THRESHOLD,          IsMasterReset,      IsDP1Enabled,      "DP1 Manp Threshold",  AbsPresManpThPara  },
+	{ DP1_MANP_MAX_LIMIT,          IsMasterReset,      IsDP1Enabled,      "DP1 Manp Limit",  AbsPresManpLmtPara  },
 	{ DP1_ALARM_SETUP,             IsAlarmEnabled,         IsDP1Enabled, "DP1 Alarm Setup",      PresAbsAlarmSetupPara },
 	{ DP1_UPPER_ALARM_ON_LIMIT,    IsPresAbsAlarmEnabled,  IsDP1Enabled, "DP1 Upr Alarm On",     PresAbsUpperAlarmOnPara },
 	{ DP1_UPPER_ALARM_OFF_LIMIT,   IsPresAbsAlarmEnabled,  IsDP1Enabled, "DP1 Upr Alarm Off",    PresAbsUpperAlarmOffPara  },
@@ -2245,6 +2254,7 @@ const PARA_INFO paraTableLCD [] PROGMEM =
 	{ DP1_OUT_LOW_COUNT,           IsPresAbsOutActive,  IsAlalogOutEnabled,    "DP1 OutCntMin",    OutputCountsForPresAbsMinimumPara  },
 	{ DP1_OUT_HIGH_COUNT,          IsPresAbsOutActive,  IsAlalogOutEnabled,    "DP1 OutCntMax",    OutputCountsForPresAbsMaximumPara  },
 	
+		
 	{ DP2_UNIT,						IsDP2Enabled,      NULL,           "DP2 Unit",           PressureDiffUnitPara  },
 	{ DP2_AREA_TYPE,               IsMasterReset, IsDP2CFMEnabled,				"DP2 AREA TYPE",     DP2AreaTypePara  },
 	{ DP2_AREA_LENGTH,             IsMasterReset, IsDP2CFMAreaSquare,				"DP2 AREA LENGTH",   DP2AreaLengthPara  },
@@ -2252,6 +2262,8 @@ const PARA_INFO paraTableLCD [] PROGMEM =
 	{ DP2_AREA_RADIOUS,            IsMasterReset, IsDP2CFMAreaRound,				"DP2 AREA RAD",  DP2AreaRadiousPara  },
 	{ DP2_ZERO_RNG,               IsDP2Enabled,      NULL,					"DP2 ZeroRngCnt",   DiffPresZeroRangePara    },
 	{ DP2_ZERO_ADJ,               IsDP2Enabled,      NULL,					"DP2 ZeroAdjCnt",   DiffPresZeroAdjustPara    },
+	{ DP2_MANP_THRESHOLD,          IsMasterReset,      IsDP2Enabled,      "DP2 Manp Threshold",  DiffPresManpThPara  },
+	{ DP2_MANP_MAX_LIMIT,          IsMasterReset,      IsDP2Enabled,      "DP2 Manp Limit",  DiffPresManpLmtPara  },
 	{ DP2_ALARM_SETUP,            IsAlarmEnabled,         IsDP2Enabled,     "DP2 Alarm Setup",      PresDiffAlarmSetupPara },
 	{ DP2_UPPER_ALARM_ON_LIMIT,   IsPresDiffAlarmEnabled, IsDP2Enabled,     "DP2 Upr Alarm On",     PresDiffUpperAlarmOnPara  },
 	{ DP2_UPPER_ALARM_OFF_LIMIT,  IsPresDiffAlarmEnabled, IsDP2Enabled,     "DP2 Upr Alarm Off",    PresDiffUpperAlarmOffPara },
@@ -2276,12 +2288,14 @@ const PARA_INFO paraTableLCD [] PROGMEM =
 	{ DP3_AREA_RADIOUS,            IsMasterReset, IsDP3CFMAreaRound,				"DP3 AREA RAD",  DP3AreaRadiousPara  },
 	{ DP3_ZERO_RNG,              IsDP3Enabled,      NULL,          "DP3 ZeroRngCnt",   DiffPres3ZeroRangePara    },
 	{ DP3_ZERO_ADJ,              IsDP3Enabled,      NULL,          "DP3 ZeroAdjCnt",   DiffPres3ZeroAdjustPara    },
+	{ DP3_MANP_THRESHOLD,          IsMasterReset,      IsDP3Enabled,      "DP3 Manp Threshold",  DiffPres3ManpThPara  },
+	{ DP3_MANP_MAX_LIMIT,          IsMasterReset,      IsDP3Enabled,      "DP3 Manp Limit",  DiffPres3ManpLmtPara  },
 	{ DP3_ALARM_SETUP,            IsAlarmEnabled,          IsDP3Enabled,     "DP3 Alarm Setup",      PresDiff3AlarmSetupPara },
 	{ DP3_UPPER_ALARM_ON_LIMIT,   IsPresDiff3AlarmEnabled, IsDP3Enabled,     "DP3 Upr Alarm On",     PresDiff3UpperAlarmOnPara  },
 	{ DP3_UPPER_ALARM_OFF_LIMIT,  IsPresDiff3AlarmEnabled, IsDP3Enabled,     "DP3 Upr Alarm Off",    PresDiff3UpperAlarmOffPara },
 	{ DP3_LOWER_ALARM_ON_LIMIT,   IsPresDiff3AlarmEnabled, IsDP3Enabled,     "DP3 Lwr Alarm On",     PresDiff3LowerAlarmOnPara  },
 	{ DP3_LOWER_ALARM_OFF_LIMIT,  IsPresDiff3AlarmEnabled, IsDP3Enabled,     "DP3 Lwr Alarm Off",    PresDiff3LowerAlarmOffPara },	   	   
-	
+		
 	{ TEMPERATURE_UNIT,                 IsTemperatureEnabled,       NULL,           "Temperature Unit",   TemperatureUnitPara  },
 	{ TEMP_ZERO_ADJ,                    IsTemperatureEnabled,       NULL,           "TempZeroAdjCnt",  TempZeroAdjustPara  },
 	{ TEMP_ALARM_SETUP,                 IsAlarmEnabled,         IsTemperatureEnabled,      "Temp Alarm Setup",      TempAlarmSetupPara },
@@ -2348,14 +2362,14 @@ const PARA_INFO paraTableLCD [] PROGMEM =
 	{ BUZZER_OFF_TIME,                  IsAlarmEnabled,             NULL,           "BuzzerOFFTime",    BuzzerOffPara },     
 	{ BUZZER_DISABLE_TIME,              IsAlarmEnabled,             NULL,           "BuzzerDISTime",    BuzzerDisablePara },     
 	
-	{ OUTPUT1_MAPPING,                  IsMasterReset,              NULL,           "OUTPUT1 MAPPING",   Output1MappingPara  },
-	{ OUTPUT2_MAPPING,                  IsMasterReset,              NULL,           "OUTPUT2 MAPPING",   Output2MappingPara  },
-	{ OUTPUT3_MAPPING,                  IsMasterReset,              NULL,           "OUTPUT3 MAPPING",   Output3MappingPara  },
-	{ OUTPUT4_MAPPING,                  IsMasterReset,              NULL,           "OUTPUT4 MAPPING",   Output4MappingPara  },
+	//{ OUTPUT1_MAPPING,                  IsMasterReset,              NULL,           "OUTPUT1 MAPPING",   Output1MappingPara  },
+	//{ OUTPUT2_MAPPING,                  IsMasterReset,              NULL,           "OUTPUT2 MAPPING",   Output2MappingPara  },
+	//{ OUTPUT3_MAPPING,                  IsMasterReset,              NULL,           "OUTPUT3 MAPPING",   Output3MappingPara  },
+	//{ OUTPUT4_MAPPING,                  IsMasterReset,              NULL,           "OUTPUT4 MAPPING",   Output4MappingPara  },
 	
 	{ SOFT_VERSION,                     NULL,                       NULL,           "Version",            VersionPara },
 	
-	{ TEMP_RH_SENS_TYPE,                IsMasterReset,      IsTempOrRHEnabled,      "Temp/RH Sens type",  TempRHSensTypePara  },	
+	//{ TEMP_RH_SENS_TYPE,                IsMasterReset,      IsTempOrRHEnabled,      "Temp/RH Sens type",  TempRHSensTypePara  },	
 	{ SERIAL_BAUD_RATE_VAL,             IsMasterReset,      IsSerialEnabled,        "Serial Baudrate",    SerialBaudratePara  },
 	{ SERIAL_DATA_STOP_PARITY_VAL,      IsMasterReset,      IsSerialEnabled,        "Ser D:St:Par Bits",  SerialDataStopParityPara },
 		
@@ -4062,6 +4076,37 @@ static char * AbsPresZeroRangePara(uint8_t operationType, int16_t * paraValue )
    return ParaSetfloatVal( operationType, paraValue, EA_DP1_ZERO_RNG, D_DP1_ZERO_RNG, MIN_DP1_ZERO_RNG, MAX_DP1_ZERO_RNG );
 }
 
+static char * AbsPresManpThPara(uint8_t operationType, int16_t * paraValue )
+{
+	return ParaSetfloatVal( operationType, paraValue, EA_DP1_MANP_THRESHOLD, 0, 0, 1000 );	
+}
+
+static char * AbsPresManpLmtPara(uint8_t operationType, int16_t * paraValue )
+{
+	return ParaSetfloatVal( operationType, paraValue, EA_DP1_MANP_MAX_LIMIT, 0, GetParameterValue(DP1_MANP_THRESHOLD), GetParameterValue(DP1_RANGE) );
+}
+
+static char * DiffPresManpThPara(uint8_t operationType, int16_t * paraValue )
+{
+	return ParaSetfloatVal( operationType, paraValue, EA_DP2_MANP_THRESHOLD, 0, 0, 1000 );
+}
+
+static char * DiffPresManpLmtPara(uint8_t operationType, int16_t * paraValue )
+{
+	return ParaSetfloatVal( operationType, paraValue, EA_DP2_MANP_MAX_LIMIT, 0, GetParameterValue(DP2_MANP_THRESHOLD), GetParameterValue(DP2_RANGE) );
+}
+
+static char * DiffPres3ManpThPara(uint8_t operationType, int16_t * paraValue )
+{
+	return ParaSetfloatVal( operationType, paraValue, EA_DP3_MANP_THRESHOLD, 0, 0, 1000 );
+}
+
+static char * DiffPres3ManpLmtPara(uint8_t operationType, int16_t * paraValue )
+{
+	return ParaSetfloatVal( operationType, paraValue, EA_DP3_MANP_MAX_LIMIT, 0, GetParameterValue(DP3_MANP_THRESHOLD), GetParameterValue(DP3_RANGE) );
+}
+
+
 static char * DiffPresZeroRangePara(uint8_t operationType, int16_t * paraValue )
 {
    return ParaSetIntegerVal( operationType, paraValue, EA_DP2_ZERO_RNG, D_DP2_ZERO_RNG, MIN_DP2_ZERO_RNG, MAX_DP2_ZERO_RNG );
@@ -5523,17 +5568,17 @@ int min_part_nox_upper_alarm_off_limit()
 
 int min_abs_pres_zero_adj()                 
 {  
-   return -10000;
+   return -GetParameterValue(DP1_RANGE);
 }
                 
 int min_diff_pres_zero_adj()                
 {  
-   return -10000;
+   return -GetParameterValue(DP2_RANGE);
 }
 
 int min_diff_pres3_zero_adj()
 {
-	return -10000;
+	return -GetParameterValue(DP3_RANGE);
 }
                 
 int min_temp_zero_adj()                     
@@ -5569,32 +5614,32 @@ int min_rh_out_low_rh()
     
 int max_pres_abs_upper_alarm_on_limit()     
 {  
-   return 10000;
+   return GetParameterValue(DP1_RANGE);
 }
 
 int max_pres_abs_lower_alarm_off_limit()    
 {  
-   return 10000;
+   return GetParameterValue(DP1_RANGE);
 }
 
 int max_pres_diff_upper_alarm_on_limit()    
 {  
-   return 10000;
+   return GetParameterValue(DP2_RANGE);
 }
 
 int max_pres_diff_lower_alarm_off_limit()   
 {  
-   return 10000;
+   return GetParameterValue(DP2_RANGE);
 }
 
 int max_pres_diff3_upper_alarm_on_limit()
 {
-	return 10000;
+	return GetParameterValue(DP3_RANGE);
 }
 
 int max_pres_diff3_lower_alarm_off_limit()
 {
-	return 10000;
+	return GetParameterValue(DP3_RANGE);
 }
 
 int max_temp_upper_alarm_on_limit()         
@@ -5634,32 +5679,32 @@ int max_part_nox_upper_alarm_on_limit()
 
 int max_abs_pres_zero_rng()                 
 {  
-   return 10000;
+   return GetParameterValue(DP1_RANGE);
 }
                 
 int max_diff_pres_zero_rng()                
 {  
-   return 10000;
+   return GetParameterValue(DP2_RANGE);
 }
                 
 int max_diff_pres3_zero_rng()
 {
-	return 10000;
+	return GetParameterValue(DP3_RANGE);
 }
  
 int max_abs_pres_zero_adj()                 
 {  
-   return 10000;
+   return GetParameterValue(DP1_RANGE);
 }
                 
 int max_diff_pres_zero_adj()                
 {  
-   return 10000;
+   return GetParameterValue(DP2_RANGE);
 }
 
 int max_diff_pres3_zero_adj()
 {
-	return 10000;
+	return GetParameterValue(DP3_RANGE);
 }
                 
 int max_temp_zero_adj()                     
@@ -5675,12 +5720,12 @@ int max_rh_zero_adj()
 
 int max_pres_abs_out_high_pres()            
 {  
-   return 10000;
+   return GetParameterValue(DP1_RANGE);
 }
 
 int max_pres_diff_out_high_pres()           
 {  
-   return 10000;
+   return GetParameterValue(DP2_RANGE);
 }
 
 int max_temp_out_high_temp()                

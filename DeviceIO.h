@@ -88,6 +88,8 @@
 #define CLOSE	0
 #define OPEN	1
 
+extern uint8_t dp_sw_factor_add[3];
+
 typedef struct
 {
    uint8_t errorCode;
@@ -179,5 +181,9 @@ unsigned int AlarmActive_Buzzer();
 void SetBuzzerSuppressionReq();
 int GetAndResetBuzzerSuppressionReq();
 uint8_t CurrentDoorStatus(void);
+
+extern void clearDp1ManpPara(void);
+extern void clearDp2ManpPara(void);
+extern void clearDp3ManpPara(void);
 
 #endif

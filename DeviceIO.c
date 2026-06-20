@@ -23,6 +23,7 @@
 #define SENSOR_2  1
 
 static SENSOR_VALUE sensorVal[TOTAL_VAL_INDEX];
+uint8_t dp_sw_factor_add[3]={0};
 
 // Kalman filter structure
 typedef struct {
@@ -83,6 +84,26 @@ static SENSOR_VALUE senVal;
 */
 
 #define DP_SW_FACT_DIVISION		10
+static int16_t su16_dpAlmdiff[3]={0},su16_convertedValue[3]={0},LastDPManpThreshold[3]={0},LastDPManLimit[3]={0};
+static uint8_t gu8_dp_sw_factor_add_cnt[3]={0};
+	
+void clearDp1ManpPara(void)
+{
+	su16_convertedValue[0] = 0;
+	gu8_dp_sw_factor_add_cnt[0] = 0;
+}	
+
+void clearDp2ManpPara(void)
+{
+	su16_convertedValue[1] = 0;
+	gu8_dp_sw_factor_add_cnt[1] = 0;
+}
+
+void clearDp3ManpPara(void)
+{
+	su16_convertedValue[2] = 0;
+	gu8_dp_sw_factor_add_cnt[2] = 0;
+}
 
 void DEVICEIO_FUNC_NAME( void )
 {
@@ -91,8 +112,7 @@ void DEVICEIO_FUNC_NAME( void )
 	int value;//, temprValue;
 	int convertedValue;
 	static uint16_t TempfireAlmTimer=0,TempAlmTimer=0;
-	static uint8_t gu8_dp_sw_factor_add_cnt[3]={0};
-	static int16_t su16_dpAlmdiff[3]={0},su16_convertedValue[3]={0};
+	
 		
 	systemError = ERROR_OK;
 
@@ -103,30 +123,45 @@ void DEVICEIO_FUNC_NAME( void )
 		  
 		convertedValue = value - GetParameterValue(DP1_ZERO_ADJ);
 		
-		su16_dpAlmdiff[0] = GetParameterValue(DP1_UPPER_ALARM_OFF_LIMIT) - GetParameterValue(DP1_LOWER_ALARM_ON_LIMIT);
-			
-		//if(b.dp_sw_factor_add1)
+		if(GetParameterValue(DP1_MANP_THRESHOLD) != LastDPManpThreshold[0])
 		{
-			if(convertedValue < GetParameterValue(DP1_LOWER_ALARM_ON_LIMIT))
-			{
-				if(gu8_dp_sw_factor_add_cnt[0]<DP_SW_FACT_DIVISION)
-				{
-					su16_convertedValue[0] += (su16_dpAlmdiff[0]/DP_SW_FACT_DIVISION);
-					gu8_dp_sw_factor_add_cnt[0]++;
-				}
-			}
-			else
-			{
-				if(gu8_dp_sw_factor_add_cnt[0])
-				{
-					su16_convertedValue[0] -= (su16_dpAlmdiff[0]/DP_SW_FACT_DIVISION);
-					gu8_dp_sw_factor_add_cnt[0]--;
-				}
-			}
-				
-			//b.dp_sw_factor_add1 = 0;
+			LastDPManpThreshold[0] = GetParameterValue(DP1_MANP_THRESHOLD);
+			clearDp1ManpPara();
 		}
-		convertedValue += su16_convertedValue[0];
+		
+		if(GetParameterValue(DP1_MANP_MAX_LIMIT) != LastDPManLimit[0])
+		{
+			LastDPManLimit[0] = GetParameterValue(DP1_MANP_MAX_LIMIT);
+			clearDp1ManpPara();
+		}
+		
+		if(GetParameterValue(DP1_MANP_THRESHOLD)>100)
+		{
+			su16_dpAlmdiff[0] = GetParameterValue(DP1_MANP_MAX_LIMIT);
+			
+			if(dp_sw_factor_add[0])
+			{
+				if(convertedValue > GetParameterValue(DP1_MANP_THRESHOLD))
+				{
+					if(gu8_dp_sw_factor_add_cnt[0]<DP_SW_FACT_DIVISION)
+					{
+						su16_convertedValue[0] += (su16_dpAlmdiff[0]/DP_SW_FACT_DIVISION);
+						gu8_dp_sw_factor_add_cnt[0]++;
+					}
+				}
+				else
+				{
+					if(gu8_dp_sw_factor_add_cnt[0])
+					{
+						su16_convertedValue[0] -= (su16_dpAlmdiff[0]/DP_SW_FACT_DIVISION);
+						gu8_dp_sw_factor_add_cnt[0]--;
+					}
+				}
+				
+				dp_sw_factor_add[0] = 0;
+			}
+			convertedValue += su16_convertedValue[0];
+		}
 		
 		AveragePara(DP1_VAL_INDEX, retVal, value, convertedValue );
 	}
@@ -139,30 +174,45 @@ void DEVICEIO_FUNC_NAME( void )
 		// Convert the value to PSI
 		convertedValue = value - GetParameterValue(DP2_ZERO_ADJ);
 		
-		su16_dpAlmdiff[1] = GetParameterValue(DP2_UPPER_ALARM_OFF_LIMIT) - GetParameterValue(DP2_LOWER_ALARM_ON_LIMIT);
-			
-		//if(b.dp_sw_factor_add1)
+		if(GetParameterValue(DP2_MANP_THRESHOLD) != LastDPManpThreshold[1])
 		{
-			if(convertedValue < GetParameterValue(DP2_LOWER_ALARM_ON_LIMIT))
-			{
-				if(gu8_dp_sw_factor_add_cnt[1]<DP_SW_FACT_DIVISION)
-				{
-					su16_convertedValue[1] += (su16_dpAlmdiff[1]/DP_SW_FACT_DIVISION);
-					gu8_dp_sw_factor_add_cnt[1]++;
-				}
-			}
-			else
-			{
-				if(gu8_dp_sw_factor_add_cnt[1])
-				{
-					su16_convertedValue[1] -= (su16_dpAlmdiff[1]/DP_SW_FACT_DIVISION);
-					gu8_dp_sw_factor_add_cnt[1]--;
-				}
-			}
-				
-			//b.dp_sw_factor_add1 = 0;
+			LastDPManpThreshold[1] = GetParameterValue(DP2_MANP_THRESHOLD);
+			clearDp1ManpPara();
 		}
-		convertedValue += su16_convertedValue[1];
+		
+		if(GetParameterValue(DP2_MANP_MAX_LIMIT) != LastDPManLimit[1])
+		{
+			LastDPManLimit[1] = GetParameterValue(DP2_MANP_MAX_LIMIT);
+			clearDp1ManpPara();
+		}
+		
+		if(GetParameterValue(DP2_MANP_THRESHOLD)>100)
+		{
+			su16_dpAlmdiff[1] = GetParameterValue(DP2_MANP_MAX_LIMIT);
+			
+			if(dp_sw_factor_add[1])
+			{
+				if(convertedValue < GetParameterValue(DP2_MANP_THRESHOLD))
+				{
+					if(gu8_dp_sw_factor_add_cnt[1]<DP_SW_FACT_DIVISION)
+					{
+						su16_convertedValue[1] += (su16_dpAlmdiff[1]/DP_SW_FACT_DIVISION);
+						gu8_dp_sw_factor_add_cnt[1]++;
+					}
+				}
+				else
+				{
+					if(gu8_dp_sw_factor_add_cnt[1])
+					{
+						su16_convertedValue[1] -= (su16_dpAlmdiff[1]/DP_SW_FACT_DIVISION);
+						gu8_dp_sw_factor_add_cnt[1]--;
+					}
+				}
+				
+				dp_sw_factor_add[1] = 0;
+			}
+			convertedValue += su16_convertedValue[1];
+		}
 		
 		AveragePara(DP2_VAL_INDEX, retVal, value, convertedValue );
 	}
@@ -175,30 +225,45 @@ void DEVICEIO_FUNC_NAME( void )
 		// Convert the value to PSI
 		convertedValue = value - GetParameterValue(DP3_ZERO_ADJ);		
 		
-		su16_dpAlmdiff[2] = GetParameterValue(DP3_UPPER_ALARM_OFF_LIMIT) - GetParameterValue(DP3_LOWER_ALARM_ON_LIMIT);
-		
-		//if(b.dp_sw_factor_add1)
+		if(GetParameterValue(DP3_MANP_THRESHOLD) != LastDPManpThreshold[2])
 		{
-			if(convertedValue < GetParameterValue(DP3_LOWER_ALARM_ON_LIMIT))
-			{
-				if(gu8_dp_sw_factor_add_cnt[2]<DP_SW_FACT_DIVISION)
-				{
-					su16_convertedValue[2] += (su16_dpAlmdiff[2]/DP_SW_FACT_DIVISION);
-					gu8_dp_sw_factor_add_cnt[2]++;
-				}
-			}
-			else
-			{
-				if(gu8_dp_sw_factor_add_cnt[2])
-				{
-					su16_convertedValue[2] -= (su16_dpAlmdiff[2]/DP_SW_FACT_DIVISION);
-					gu8_dp_sw_factor_add_cnt[2]--;
-				}
-			}
-			
-			//b.dp_sw_factor_add1 = 0;
+			LastDPManpThreshold[2] = GetParameterValue(DP3_MANP_THRESHOLD);
+			clearDp1ManpPara();
 		}
-		convertedValue += su16_convertedValue[2];
+		
+		if(GetParameterValue(DP3_MANP_MAX_LIMIT) != LastDPManLimit[2])
+		{
+			LastDPManLimit[2] = GetParameterValue(DP3_MANP_MAX_LIMIT);
+			clearDp1ManpPara();
+		}
+		
+		if(GetParameterValue(DP3_MANP_THRESHOLD)>100)
+		{
+			su16_dpAlmdiff[2] = GetParameterValue(DP3_MANP_MAX_LIMIT);
+		
+			if(dp_sw_factor_add[2])
+			{
+				if(convertedValue < GetParameterValue(DP3_MANP_THRESHOLD))
+				{
+					if(gu8_dp_sw_factor_add_cnt[2]<DP_SW_FACT_DIVISION)
+					{
+						su16_convertedValue[2] += (su16_dpAlmdiff[2]/DP_SW_FACT_DIVISION);
+						gu8_dp_sw_factor_add_cnt[2]++;
+					}
+				}
+				else
+				{
+					if(gu8_dp_sw_factor_add_cnt[2])
+					{
+						su16_convertedValue[2] -= (su16_dpAlmdiff[2]/DP_SW_FACT_DIVISION);
+						gu8_dp_sw_factor_add_cnt[2]--;
+					}
+				}
+			
+				dp_sw_factor_add[2] = 0;
+			}
+			convertedValue += su16_convertedValue[2];
+		}
 		
 		AveragePara(DP3_VAL_INDEX, retVal, value, convertedValue );
 	}
