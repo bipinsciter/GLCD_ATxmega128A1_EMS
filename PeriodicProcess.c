@@ -47,6 +47,14 @@ void PERIODIC_FUNC_NAME( void )
 		DisplaySensorValues();
 	}
 	
+	if(gu16_AlarmLimitCheckDisableTimer)
+	{
+		gu16_AlarmLimitCheckDisableTimer--;
+		if(!gu16_AlarmLimitCheckDisableTimer)
+		{
+			gu8_AlarmLimitCheckDisable=0;
+		}
+	}
 	
 	if(u8_resetTimer)
 	{

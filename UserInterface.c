@@ -48,7 +48,7 @@
 #include "rtc.h" 
 #include "pid.h"
 
-#define SOFTWARE_VERSION                     209
+#define SOFTWARE_VERSION        297
 
 #define EEPROM_WRITE_TIMEOUT	30
 
@@ -834,7 +834,8 @@ static char formatedValue[12];
 static const char *formatedUnit;
 //static const char * formatedtype;
 char gu8_inOutput[16][10]={0};
-uint8_t gu8_IsCOMDisable=0, gu8_IsLCDDisable=0; 
+uint8_t gu8_IsCOMDisable=0, gu8_IsLCDDisable=0, gu8_AlarmLimitCheckDisable=0; 
+uint16_t gu16_AlarmLimitCheckDisableTimer=0; 
 int PreTd=0,PostTd=0,TDdiff=0;
 uint8_t PreTdErr=0,PostTdErr=0,TDdiffErr=0;
 	
@@ -2110,12 +2111,14 @@ static char * Formatfloat( int16_t value)
 
 static char * FormatVersion()
 {
-    int major = SOFTWARE_VERSION/100;
-    int minor = SOFTWARE_VERSION%100;
-    if( minor < 10 )
-       locked_sprintf_P( formatedValue, PSTR("%d.0%d"), major, minor );
-    else
-       locked_sprintf_P( formatedValue, PSTR("%d.%d"), major, minor );
+	int softver = SOFTWARE_VERSION; 
+    int major = softver/100;
+	softver %= 100;
+    int minor = softver/10;
+	softver %= 10;
+	int change = softver;
+	
+    locked_sprintf_P( formatedValue, PSTR("%d.%d.%d"), major, minor, change );
 
     return formatedValue;
 }
@@ -2803,11 +2806,14 @@ static void ParameterOperationsOnLowSettings( uint8_t operationType, int16_t * p
    }
    else
    {
-      if ( *paraValue <= minValue)
-         *paraValue = minValue;
-      temp = GetParameterValue(maxValParaId);
-      if ( *paraValue >= temp)
-         *paraValue = temp-1;
+	   if(!gu8_AlarmLimitCheckDisable)
+	   {
+		  if ( *paraValue <= minValue)
+			 *paraValue = minValue;
+		  temp = GetParameterValue(maxValParaId);
+		  if ( *paraValue >= temp)
+			 *paraValue = temp-1;
+	   }
    }
 
 	if(!isMasterReset)
@@ -2838,11 +2844,14 @@ static void ParameterOperationsOnHighSettings( uint8_t operationType, int16_t * 
    }
    else
    {
-      temp = GetParameterValue(minValParaId);
-      if ( *paraValue <= temp)
-         *paraValue = temp+1;
-      if ( *paraValue > maxValue)
-         *paraValue = maxValue;
+	   if(!gu8_AlarmLimitCheckDisable)
+	   {
+		  temp = GetParameterValue(minValParaId);
+		  if ( *paraValue <= temp)
+			 *paraValue = temp+1;
+		  if ( *paraValue > maxValue)
+			 *paraValue = maxValue;
+	   }
    }
    
    if(!isMasterReset)

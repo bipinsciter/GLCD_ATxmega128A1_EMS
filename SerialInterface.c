@@ -57,6 +57,8 @@
 #define PUT_DFU_ID				0xAA
 #define LCD_CONTROL_ID			0x6F
 #define COM_CONTROL_ID			0x70
+#define ALM_CONTROL_FLAG_ID		0x71
+
 
 // Broadcast data IDs
 #define ALL_RUNTIME_VALUES_BRDCAST  0x80
@@ -383,8 +385,6 @@ void SerialInterfaceTask( void )
 			}
 		}
 		
-		
-		
         // Valid packet is detected. Process it.
         //OSSemaTakeEver(SerialDeviceMutex);
         switch( cmdId[Ind] )
@@ -422,6 +422,27 @@ void SerialInterfaceTask( void )
 					gu8_IsCOMDisable=rxDataBuffer[Ind][2]-'0';
 					OSWriteEEPromWord((unsigned int *)COM_CONTROL_ADDR, (unsigned int)gu8_IsCOMDisable);
 					SendPacket(Ind, COM_CONTROL_ID, txDataBuffer, i);
+				}
+			
+			break;
+			
+			case ALM_CONTROL_FLAG_ID:
+			
+				if((rxDataBuffer[Ind][2]=='0') || (rxDataBuffer[Ind][2]=='1'))
+				{
+					gu8_AlarmLimitCheckDisable=rxDataBuffer[Ind][2]-'0';
+					
+					if(gu8_AlarmLimitCheckDisable == 1)
+					{
+						gu16_AlarmLimitCheckDisableTimer=300;
+					}
+					else
+					{
+						gu16_AlarmLimitCheckDisableTimer=0;
+					}
+					
+					
+					SendPacket(Ind, ALM_CONTROL_FLAG_ID, txDataBuffer, i);
 				}
 			
 			break;
