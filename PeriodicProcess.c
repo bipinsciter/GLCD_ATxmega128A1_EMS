@@ -7,6 +7,7 @@
 #include "UserInterface.h"
 #include "SerialInterface.h"
 #include "DeviceIO.h"
+#include "eepromAdr.h"
 #include "pid.h"
 
 static int serialTime,serialPort, loggingTime;
@@ -52,7 +53,55 @@ void PERIODIC_FUNC_NAME( void )
 		gu16_AlarmLimitCheckDisableTimer--;
 		if(!gu16_AlarmLimitCheckDisableTimer)
 		{
-			gu8_AlarmLimitCheckDisable=0;
+			if(GetParameterValue(DP1_UPPER_ALARM_OFF_LIMIT) > GetParameterValue(DP1_UPPER_ALARM_ON_LIMIT))
+			{
+				SetParameterValue(EA_DP1_UPPER_ALARM_OFF_LIMIT, GetParameterValue(DP1_UPPER_ALARM_ON_LIMIT)-100);
+			}
+			
+			if(GetParameterValue(DP2_UPPER_ALARM_OFF_LIMIT) > GetParameterValue(DP2_UPPER_ALARM_ON_LIMIT))
+			{
+				SetParameterValue(EA_DP2_UPPER_ALARM_OFF_LIMIT, GetParameterValue(DP2_UPPER_ALARM_ON_LIMIT)-100);
+			}
+			
+			if(GetParameterValue(DP3_UPPER_ALARM_OFF_LIMIT) > GetParameterValue(DP3_UPPER_ALARM_ON_LIMIT))
+			{
+				SetParameterValue(EA_DP3_UPPER_ALARM_OFF_LIMIT, GetParameterValue(DP3_UPPER_ALARM_ON_LIMIT)-100);
+			}
+			
+			if(GetParameterValue(TEMP_UPPER_ALARM_OFF_LIMIT) > GetParameterValue(TEMP_UPPER_ALARM_ON_LIMIT))
+			{
+				SetParameterValue(EA_TEMP_UPPER_ALARM_OFF_LIMIT, GetParameterValue(TEMP_UPPER_ALARM_ON_LIMIT)-100);
+			}
+			
+			if(GetParameterValue(RH_UPPER_ALARM_OFF_LIMIT) > GetParameterValue(RH_UPPER_ALARM_ON_LIMIT))
+			{
+				SetParameterValue(EA_RH_UPPER_ALARM_OFF_LIMIT, GetParameterValue(RH_UPPER_ALARM_ON_LIMIT)-100);
+			}
+			
+			if(GetParameterValue(DP1_LOWER_ALARM_OFF_LIMIT) < GetParameterValue(DP1_LOWER_ALARM_ON_LIMIT))
+			{
+				SetParameterValue(EA_DP1_LOWER_ALARM_OFF_LIMIT, GetParameterValue(DP1_LOWER_ALARM_ON_LIMIT)+100);
+			}
+			
+			if(GetParameterValue(DP2_LOWER_ALARM_OFF_LIMIT) < GetParameterValue(DP2_LOWER_ALARM_ON_LIMIT))
+			{
+				SetParameterValue(EA_DP2_LOWER_ALARM_OFF_LIMIT, GetParameterValue(DP2_LOWER_ALARM_ON_LIMIT)+100);
+			}
+			
+			if(GetParameterValue(DP3_LOWER_ALARM_OFF_LIMIT) < GetParameterValue(DP3_LOWER_ALARM_ON_LIMIT))
+			{
+				SetParameterValue(EA_DP3_LOWER_ALARM_OFF_LIMIT, GetParameterValue(DP3_LOWER_ALARM_ON_LIMIT)+100);
+			}
+			
+			if(GetParameterValue(TEMP_LOWER_ALARM_OFF_LIMIT) < GetParameterValue(TEMP_LOWER_ALARM_ON_LIMIT))
+			{
+				SetParameterValue(EA_TEMP_LOWER_ALARM_OFF_LIMIT, GetParameterValue(TEMP_LOWER_ALARM_ON_LIMIT)+100);
+			}
+			
+			if(GetParameterValue(RH_LOWER_ALARM_OFF_LIMIT) < GetParameterValue(RH_LOWER_ALARM_ON_LIMIT))
+			{
+				SetParameterValue(EA_RH_LOWER_ALARM_OFF_LIMIT, GetParameterValue(RH_LOWER_ALARM_ON_LIMIT)+100);
+			}
 		}
 	}
 	

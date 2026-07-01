@@ -48,7 +48,7 @@
 #include "rtc.h" 
 #include "pid.h"
 
-#define SOFTWARE_VERSION        297
+#define SOFTWARE_VERSION        298
 
 #define EEPROM_WRITE_TIMEOUT	30
 
@@ -834,7 +834,7 @@ static char formatedValue[12];
 static const char *formatedUnit;
 //static const char * formatedtype;
 char gu8_inOutput[16][10]={0};
-uint8_t gu8_IsCOMDisable=0, gu8_IsLCDDisable=0, gu8_AlarmLimitCheckDisable=0; 
+uint8_t gu8_IsCOMDisable=0, gu8_IsLCDDisable=0; 
 uint16_t gu16_AlarmLimitCheckDisableTimer=0; 
 int PreTd=0,PostTd=0,TDdiff=0;
 uint8_t PreTdErr=0,PostTdErr=0,TDdiffErr=0;
@@ -2689,6 +2689,11 @@ uint8_t GetParameterStr( uint8_t paraId, uint8_t *parastr )
 	return ERROR_OK;
 }
 
+void SetParameterValue(int eepromAddr, int paraValue )
+{
+	OSWriteEEPromWord((uint8_t *)eepromAddr, paraValue);
+}
+
 // returns error code as a function return and actual set value in paraValue
 uint8_t SetParameter( char paraId, int *paraValue )
 {
@@ -2806,7 +2811,7 @@ static void ParameterOperationsOnLowSettings( uint8_t operationType, int16_t * p
    }
    else
    {
-	   if(!gu8_AlarmLimitCheckDisable)
+	   if(!gu16_AlarmLimitCheckDisableTimer)
 	   {
 		  if ( *paraValue <= minValue)
 			 *paraValue = minValue;
@@ -2844,7 +2849,7 @@ static void ParameterOperationsOnHighSettings( uint8_t operationType, int16_t * 
    }
    else
    {
-	   if(!gu8_AlarmLimitCheckDisable)
+	   if(!gu16_AlarmLimitCheckDisableTimer)
 	   {
 		  temp = GetParameterValue(minValParaId);
 		  if ( *paraValue <= temp)

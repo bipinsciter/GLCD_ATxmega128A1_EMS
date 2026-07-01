@@ -57,8 +57,6 @@
 #define PUT_DFU_ID				0xAA
 #define LCD_CONTROL_ID			0x6F
 #define COM_CONTROL_ID			0x70
-#define ALM_CONTROL_FLAG_ID		0x71
-
 
 // Broadcast data IDs
 #define ALL_RUNTIME_VALUES_BRDCAST  0x80
@@ -426,27 +424,6 @@ void SerialInterfaceTask( void )
 			
 			break;
 			
-			case ALM_CONTROL_FLAG_ID:
-			
-				if((rxDataBuffer[Ind][2]=='0') || (rxDataBuffer[Ind][2]=='1'))
-				{
-					gu8_AlarmLimitCheckDisable=rxDataBuffer[Ind][2]-'0';
-					
-					if(gu8_AlarmLimitCheckDisable == 1)
-					{
-						gu16_AlarmLimitCheckDisableTimer=300;
-					}
-					else
-					{
-						gu16_AlarmLimitCheckDisableTimer=0;
-					}
-					
-					
-					SendPacket(Ind, ALM_CONTROL_FLAG_ID, txDataBuffer, i);
-				}
-			
-			break;
-			 
 		    case READ_ALL_RUNTIME_VALUES:
             i = MakeAllRuntimeParaXmitSrting();
  		        SendPacket(Ind, READ_ALL_RUNTIME_VALUES, txDataBuffer, i);
@@ -689,17 +666,42 @@ void SerialInterfaceTask( void )
 					  
 					default:
 					  
-					paraValue = atoi( &rxDataBuffer[Ind][3] );
-					ch = SetParameter( rxDataBuffer[Ind][2], &paraValue );
-					txDataBuffer[0] = ch;
-					txDataBuffer[1] = rxDataBuffer[Ind][2];
-					if( ch != ERROR_OK )
+						switch((uint8_t)rxDataBuffer[Ind][2])
+						{
+							case DP1_UPPER_ALARM_ON_LIMIT:
+							case DP1_UPPER_ALARM_OFF_LIMIT:
+							case DP1_LOWER_ALARM_OFF_LIMIT:
+							case DP1_LOWER_ALARM_ON_LIMIT:
+							case DP2_UPPER_ALARM_ON_LIMIT:
+							case DP2_UPPER_ALARM_OFF_LIMIT:
+							case DP2_LOWER_ALARM_OFF_LIMIT:
+							case DP2_LOWER_ALARM_ON_LIMIT:
+							case DP3_UPPER_ALARM_ON_LIMIT:
+							case DP3_UPPER_ALARM_OFF_LIMIT:
+							case DP3_LOWER_ALARM_OFF_LIMIT:
+							case DP3_LOWER_ALARM_ON_LIMIT:
+							case TEMP_UPPER_ALARM_ON_LIMIT:
+							case TEMP_UPPER_ALARM_OFF_LIMIT:
+							case TEMP_LOWER_ALARM_OFF_LIMIT:
+							case TEMP_LOWER_ALARM_ON_LIMIT:
+							case RH_UPPER_ALARM_ON_LIMIT:
+							case RH_UPPER_ALARM_OFF_LIMIT:
+							case RH_LOWER_ALARM_OFF_LIMIT:
+							case RH_LOWER_ALARM_ON_LIMIT:
+								gu16_AlarmLimitCheckDisableTimer=300;
+							break;
+						}
+						paraValue = atoi( &rxDataBuffer[Ind][3] );
+						ch = SetParameter( rxDataBuffer[Ind][2], &paraValue );
+						txDataBuffer[0] = ch;
+						txDataBuffer[1] = rxDataBuffer[Ind][2];
+						if( ch != ERROR_OK )
 						SendPacket(Ind, WRITE_PARAMETER, txDataBuffer, 2);
-					else
-					{
-						locked_sprintf_P( txDataBuffer+2, PSTR("%d"), paraValue );
-						SendPacket(Ind, WRITE_PARAMETER, txDataBuffer, strlen(txDataBuffer+2)+2);
-					}
+						else
+						{
+							locked_sprintf_P( txDataBuffer+2, PSTR("%d"), paraValue );
+							SendPacket(Ind, WRITE_PARAMETER, txDataBuffer, strlen(txDataBuffer+2)+2);
+						}
 						
 					break;
 				}

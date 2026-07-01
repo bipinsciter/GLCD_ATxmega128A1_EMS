@@ -353,11 +353,12 @@ uint8_t GetParameterStr( uint8_t paraId, uint8_t *parastr );
 uint8_t SetParameterStr( uint8_t paraId, uint8_t *parastr );
 
 int GetParameterValue( PARAMETER paraId );
+void SetParameterValue(int eepromAddr, int paraValue );
 
 extern unsigned char systemError;
 //extern unsigned char displayPage;
 extern char gu8_inOutput[16][10];
-extern uint8_t gu8_IsCOMDisable, gu8_IsLCDDisable, gu8_AlarmLimitCheckDisable, u8_DFUresetTimer; 
+extern uint8_t gu8_IsCOMDisable, gu8_IsLCDDisable, u8_DFUresetTimer; 
 extern uint16_t gu16_AlarmLimitCheckDisableTimer;
 extern int PreTd,PostTd,TDdiff;
 extern uint8_t PreTdErr,PostTdErr,TDdiffErr;
