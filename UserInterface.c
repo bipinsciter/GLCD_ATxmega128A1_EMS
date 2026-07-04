@@ -48,7 +48,7 @@
 #include "rtc.h" 
 #include "pid.h"
 
-#define SOFTWARE_VERSION        298
+#define SOFTWARE_VERSION        299
 
 #define EEPROM_WRITE_TIMEOUT	30
 
@@ -1583,7 +1583,7 @@ char DisplayDP1(uint8_t error, int16_t value)
 	if (IsLCDDisplay())
 	{
 		//OSSemaTakeEver(UIMutex);
-	   
+		
 		FormatDP(GetParameterValue( DP1_UNIT ), value, GetParameterValue(DP1_RANGE), GetParameterValue(DP1_AREA_TYPE), GetParameterValue(DP1_AREA_LENGTH), GetParameterValue(DP1_AREA_WIDTH), GetParameterValue(DP1_AREA_RADIOUS));
 		formatedValue[strlen(formatedValue)-1] = '\0';  // one digit less resolution then setup
 		if(formatedValue[strlen(formatedValue)-1] == '.' )
@@ -1885,6 +1885,7 @@ static void FormatDP(uint8_t unit, int16_t value, int16_t range1, uint8_t AreaTy
 
 		result /= 100;
 		
+		memset(formatedValue,0,sizeof(formatedValue));
 		dtostrf( result, sizeof(formatedValue)-1, decimal, formatedValue);
 		strcpy( formatedValue, strtrim(formatedValue));
 	}
@@ -1917,6 +1918,7 @@ static void FormatTemperature(int16_t value, uint8_t decimal)
          result = value / 100.0;
       }
 
+	  memset(formatedValue,0,sizeof(formatedValue));
       dtostrf( result, sizeof(formatedValue)-1, decimal, formatedValue);
       strcpy( formatedValue, strtrim(formatedValue));
    }
@@ -1934,6 +1936,7 @@ static void FormatHumidity(int16_t value, uint8_t decimal)
    {
       formatedUnit = PSTR("%");
       result = value / 100.0;
+	  memset(formatedValue,0,sizeof(formatedValue));
       dtostrf( result, sizeof(formatedValue)-1, decimal, formatedValue);
       strcpy( formatedValue, strtrim(formatedValue));
    }
