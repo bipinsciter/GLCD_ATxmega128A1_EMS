@@ -24,5 +24,6 @@ void InitUSART(USART_t * usart, PORT_t * port, uint8_t rxpin, uint8_t txpin, uin
 uint8_t CalCRC(uint8_t *ptr,uint16_t NoOfByte);
 void software_reset(void);    
 short findValue(char *ptr,unsigned char NoOfDigit);        
+uint8_t CheckSerialSet(void);
                
 #endif

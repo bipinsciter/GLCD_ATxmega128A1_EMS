@@ -48,7 +48,7 @@
 #include "rtc.h" 
 #include "pid.h"
 
-#define SOFTWARE_VERSION        299
+#define SOFTWARE_VERSION        300
 
 #define EEPROM_WRITE_TIMEOUT	30
 
@@ -399,6 +399,10 @@
 #define MIN_PART_VOC_UPPER_ALARM_OFF_LIMIT            min_part_voc_upper_alarm_off_limit()
 #define MIN_PART_NOX_UPPER_ALARM_OFF_LIMIT            min_part_nox_upper_alarm_off_limit()
       
+	  
+#define MIN_DP1_RANGE                         0    	  
+#define MIN_DP2_RANGE                         0    	  
+#define MIN_DP3_RANGE                         0    	  
 #define MIN_DP1_ZERO_RNG                         0              
 #define MIN_DP2_ZERO_RNG                        0         
 #define MIN_DP3_ZERO_RNG                       0        
@@ -434,6 +438,9 @@
 #define MAX_PART_VOC_UPPER_ALARM_ON_LIMIT             max_part_voc_upper_alarm_on_limit()
 #define MAX_PART_NOX_UPPER_ALARM_ON_LIMIT             max_part_nox_upper_alarm_on_limit()
 
+#define MAX_DP1_RANGE                         30000
+#define MAX_DP2_RANGE                         30000
+#define MAX_DP3_RANGE                         30000
 #define MAX_DP1_ZERO_RNG                         max_abs_pres_zero_rng()
 #define MAX_DP2_ZERO_RNG                        max_diff_pres_zero_rng()   
 #define MAX_DP3_ZERO_RNG                       max_diff_pres3_zero_rng()             
@@ -625,6 +632,14 @@ static char * DiffPres3ZeroRangePara(uint8_t operationType, int16_t * paraValue 
 static char * AbsPresZeroAdjustPara(uint8_t operationType, int16_t * paraValue );
 static char * DiffPresZeroAdjustPara(uint8_t operationType, int16_t * paraValue );
 static char * DiffPres3ZeroAdjustPara(uint8_t operationType, int16_t * paraValue );
+
+static char * PresRange1AdjPara(uint8_t operationType, int16_t * paraValue );
+static char * PresRange2AdjPara(uint8_t operationType, int16_t * paraValue );
+static char * PresRange3AdjPara(uint8_t operationType, int16_t * paraValue );
+static char * PresRange4AdjPara(uint8_t operationType, int16_t * paraValue );
+static char * PresRange5AdjPara(uint8_t operationType, int16_t * paraValue );
+static char * PresRange6AdjPara(uint8_t operationType, int16_t * paraValue );
+
 static char * TempZeroAdjustPara(uint8_t operationType, int16_t * paraValue );
 static char * Temp2ZeroAdjustPara(uint8_t operationType, int16_t * paraValue );
 static char * TempDiffAlarmPara(uint8_t operationType, int16_t * paraValue );
@@ -1302,6 +1317,21 @@ void DisplaySensorValues(void)
 		GetPareValue(DP1_VAL_INDEX, &senVal);
 		if( abs(senVal.convertedValue) < GetParameterValue( DP1_ZERO_RNG ))
 			senVal.convertedValue = 0;		
+		
+		if( abs(senVal.convertedValue) < 5000)
+			senVal.convertedValue += GetParameterValue( DP_RANGE1_ADJ );
+		else if( abs(senVal.convertedValue) < 10000)	
+			senVal.convertedValue += GetParameterValue( DP_RANGE2_ADJ );
+		else if( abs(senVal.convertedValue) < 15000)
+			senVal.convertedValue += GetParameterValue( DP_RANGE3_ADJ );
+		else if( abs(senVal.convertedValue) < 20000)
+			senVal.convertedValue += GetParameterValue( DP_RANGE4_ADJ );
+		else if( abs(senVal.convertedValue) < 25000)
+			senVal.convertedValue += GetParameterValue( DP_RANGE5_ADJ );
+		else if( abs(senVal.convertedValue) < 30000)
+			senVal.convertedValue += GetParameterValue( DP_RANGE6_ADJ );
+		
+		
 		noSystemErrDisp = DisplayDP1(senVal.errorCode, senVal.convertedValue);
 		//---------------------------------------------------------------------
 		GetPareValue(HUMIDITY_VAL_INDEX, &senVal);
@@ -2241,8 +2271,8 @@ const PARA_INFO paraTableLCD [] PROGMEM =
 	{ DP1_AREA_LENGTH,             IsMasterReset, IsDP1CFMAreaSquare,				"DP1 AREA LENGTH",   DP1AreaLengthPara  },
 	{ DP1_AREA_WIDTH,              IsMasterReset, IsDP1CFMAreaSquare,				"DP1 AREA WIDTH",    DP1AreaWidthPara  },
 	{ DP1_AREA_RADIOUS,            IsMasterReset, IsDP1CFMAreaRound,				"DP1 AREA RAD",  DP1AreaRadiousPara  },
-	{ DP1_ZERO_RNG,                IsDP1Enabled,  NULL,								"DP1 ZeroRngCnt",   AbsPresZeroRangePara  },
-	{ DP1_ZERO_ADJ,                IsDP1Enabled,  NULL,								"DP1 ZeroAdjCnt",   AbsPresZeroAdjustPara  },
+	{ DP1_ZERO_RNG,                IsDP1Enabled,  NULL,								"DP1 ZeroRng",   AbsPresZeroRangePara  },
+	{ DP1_ZERO_ADJ,                IsDP1Enabled,  NULL,								"DP1 ZeroAdj",   AbsPresZeroAdjustPara  },
 	{ DP1_MANP_THRESHOLD,          IsMasterReset,      IsDP1Enabled,      "DP1 Manp Threshold",  AbsPresManpThPara  },
 	{ DP1_MANP_MAX_LIMIT,          IsMasterReset,      IsDP1Enabled,      "DP1 Manp Limit",  AbsPresManpLmtPara  },
 	{ DP1_ALARM_SETUP,             IsAlarmEnabled,         IsDP1Enabled, "DP1 Alarm Setup",      PresAbsAlarmSetupPara },
@@ -2267,8 +2297,8 @@ const PARA_INFO paraTableLCD [] PROGMEM =
 	{ DP2_AREA_LENGTH,             IsMasterReset, IsDP2CFMAreaSquare,				"DP2 AREA LENGTH",   DP2AreaLengthPara  },
 	{ DP2_AREA_WIDTH,              IsMasterReset, IsDP2CFMAreaSquare,				"DP2 AREA WIDTH",    DP2AreaWidthPara  },
 	{ DP2_AREA_RADIOUS,            IsMasterReset, IsDP2CFMAreaRound,				"DP2 AREA RAD",  DP2AreaRadiousPara  },
-	{ DP2_ZERO_RNG,               IsDP2Enabled,      NULL,					"DP2 ZeroRngCnt",   DiffPresZeroRangePara    },
-	{ DP2_ZERO_ADJ,               IsDP2Enabled,      NULL,					"DP2 ZeroAdjCnt",   DiffPresZeroAdjustPara    },
+	{ DP2_ZERO_RNG,               IsDP2Enabled,      NULL,					"DP2 ZeroRng",   DiffPresZeroRangePara    },
+	{ DP2_ZERO_ADJ,               IsDP2Enabled,      NULL,					"DP2 ZeroAdj",   DiffPresZeroAdjustPara    },
 	{ DP2_MANP_THRESHOLD,          IsMasterReset,      IsDP2Enabled,      "DP2 Manp Threshold",  DiffPresManpThPara  },
 	{ DP2_MANP_MAX_LIMIT,          IsMasterReset,      IsDP2Enabled,      "DP2 Manp Limit",  DiffPresManpLmtPara  },
 	{ DP2_ALARM_SETUP,            IsAlarmEnabled,         IsDP2Enabled,     "DP2 Alarm Setup",      PresDiffAlarmSetupPara },
@@ -2293,8 +2323,8 @@ const PARA_INFO paraTableLCD [] PROGMEM =
 	{ DP3_AREA_LENGTH,             IsMasterReset, IsDP3CFMAreaSquare,				"DP3 AREA LENGTH",   DP3AreaLengthPara  },
 	{ DP3_AREA_WIDTH,              IsMasterReset, IsDP3CFMAreaSquare,				"DP3 AREA WIDTH",    DP3AreaWidthPara  },
 	{ DP3_AREA_RADIOUS,            IsMasterReset, IsDP3CFMAreaRound,				"DP3 AREA RAD",  DP3AreaRadiousPara  },
-	{ DP3_ZERO_RNG,              IsDP3Enabled,      NULL,          "DP3 ZeroRngCnt",   DiffPres3ZeroRangePara    },
-	{ DP3_ZERO_ADJ,              IsDP3Enabled,      NULL,          "DP3 ZeroAdjCnt",   DiffPres3ZeroAdjustPara    },
+	{ DP3_ZERO_RNG,              IsDP3Enabled,      NULL,          "DP3 ZeroRng",   DiffPres3ZeroRangePara    },
+	{ DP3_ZERO_ADJ,              IsDP3Enabled,      NULL,          "DP3 ZeroAdj",   DiffPres3ZeroAdjustPara    },
 	{ DP3_MANP_THRESHOLD,          IsMasterReset,      IsDP3Enabled,      "DP3 Manp Threshold",  DiffPres3ManpThPara  },
 	{ DP3_MANP_MAX_LIMIT,          IsMasterReset,      IsDP3Enabled,      "DP3 Manp Limit",  DiffPres3ManpLmtPara  },
 	{ DP3_ALARM_SETUP,            IsAlarmEnabled,          IsDP3Enabled,     "DP3 Alarm Setup",      PresDiff3AlarmSetupPara },
@@ -2383,12 +2413,21 @@ const PARA_INFO paraTableLCD [] PROGMEM =
 	{ AHU_ID,                     NULL,                       NULL,           "AHU ID",            AHUIdPara },	
 	{ ROOM_ID,                     NULL,                       NULL,           "ROOM ID",            ROOMIdPara },
 	
-	{ DP1_RANGE,                   IsMasterReset,      IsDP1Enabled, "DP1SenRng(Pa)",   PresAbsRange  },
-	{ DP2_RANGE,                  IsMasterReset,      IsDP2Enabled,   "DP2SenRng(Pa)",     PresDiffRange  },
-	{ DP3_RANGE,                 IsMasterReset,      IsDP3Enabled,   "DP3SenRng(Pa)",    PresDiff3Range  },
 	{ DP1_SENS_TYPE,               IsMasterReset,      IsDP1Enabled, "DP1SensType",     PresAbsSensTypePara  },
 	{ DP2_SENS_TYPE,              IsMasterReset,      IsDP2Enabled,  "DP2SensType",        PresDiffSensTypePara  },
 	{ DP3_SENS_TYPE,             IsMasterReset,      IsDP3Enabled,  "DP3SensType",       PresDiff3SensTypePara  },
+	
+	{ DP1_RANGE,                   IsMasterReset,      IsDP1Enabled, "DP1SenRng(Pa)",   PresAbsRange  },
+	{ DP2_RANGE,                  IsMasterReset,      IsDP2Enabled,   "DP2SenRng(Pa)",     PresDiffRange  },
+	{ DP3_RANGE,                 IsMasterReset,      IsDP3Enabled,   "DP3SenRng(Pa)",    PresDiff3Range  },
+	
+	{ DP_RANGE1_ADJ,               CheckSerialSet,      0, "DP RANGE1 ADJ",     PresRange1AdjPara  },
+	{ DP_RANGE2_ADJ,              CheckSerialSet,      0,  "DP RANGE2 ADJ",        PresRange2AdjPara  },
+	{ DP_RANGE3_ADJ,             CheckSerialSet,      0,  "DP RANGE3 ADJ",       PresRange3AdjPara  },
+	{ DP_RANGE4_ADJ,               CheckSerialSet,      0, "DP RANGE4 ADJ",     PresRange4AdjPara  },
+	{ DP_RANGE5_ADJ,              CheckSerialSet,      0,  "DP RANGE5 ADJ",        PresRange5AdjPara  },
+	{ DP_RANGE6_ADJ,             CheckSerialSet,      0,  "DP RANGE6 ADJ",       PresRange6AdjPara  },
+	
 	{ CUSTOMER_ID,                      NULL,                       NULL,           "CustomerID",         CustomerIDPara  },
 	{ SERIAL_NO,                        NULL,                       NULL,           "SerialNo",           SerialNoPara  },
 	{ CONFIG_SYSTEM,                    NULL,                       NULL,           "SystemConfig",       SystemConfigPara  },
@@ -2530,7 +2569,7 @@ static void DisplayEditor(char keysPressed, char keys)
       {
 		  activeParaValue--;
          //OSSemaTakeEver(UIMutex);
-         dispStr = ( * activeParaInfo.parameterHandler)( PARA_WRITE, &activeParaValue);  // Para value +
+         dispStr = ( * activeParaInfo.parameterHandler)( PARA_WRITE, &activeParaValue);  // Para value -
       }
       else if(( keysPressed & UP_KEY ) != 0 && ( keysPressed & DOWN_KEY ) != 0 )
       {
@@ -2578,7 +2617,7 @@ static void DisplayEditor(char keysPressed, char keys)
       {
 		 activeParaValue--;
          //OSSemaTakeEver(UIMutex);
-         dispStr = ( * activeParaInfo.parameterHandler)( PARA_WRITE, &activeParaValue);  // Para value +
+         dispStr = ( * activeParaInfo.parameterHandler)( PARA_WRITE, &activeParaValue);  // Para value -
       }
       else
       {
@@ -2711,11 +2750,10 @@ uint8_t SetParameter( char paraId, int *paraValue )
    if( paraInfoVal.secValidationFunction != NULL && paraInfoVal.secValidationFunction != IsMasterReset)
       if((*paraInfoVal.secValidationFunction)() == 0 )
          return ERROR_PARA_NOT_SUPORTED;
+		 
    if( paraInfoVal.parameterHandler != NULL )
    {
-//      OSSemaTakeEver(UIMutex);
 		(* paraInfoVal.parameterHandler)( PARA_WRITE_VALUE_ONLY, paraValue );
-//      OSSemaGive(UIMutex);
    }
    return ERROR_OK;
 }
@@ -3766,26 +3804,28 @@ static char * SerialDataStopParityPara(uint8_t operationType, int16_t * paraValu
 
 static char * PresAbsRange(uint8_t operationType, int16_t * paraValue )
 {
-   if(( operationType == (uint8_t)PARA_READ_VALUE_ONLY ) || ( operationType == (uint8_t)PARA_READ ))
-   {
-      *paraValue = OSReadEEPromWord((unsigned int *)EA_DP1_RANGE);
-	  return FormatInteger( *paraValue );
-   }
-   else if( operationType == (uint8_t)PARA_WRITE || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY)
-   {
-         if( *paraValue < 0 )
-            *paraValue = 0; // roll over
-   }
-   else if( operationType == (uint8_t)PARA_DEFAULT )
-   {
-	   *paraValue = D_DP1_RANGE;
-   }
-   
-   OSWriteEEPromWord((unsigned int *)EA_DP1_RANGE, *paraValue);
-   
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatInteger( *paraValue );
+	return ParaSetfloatVal( operationType, paraValue, EA_DP1_RANGE, D_DP1_RANGE, MIN_DP1_RANGE, MAX_DP1_RANGE );
+	//
+   //if(( operationType == (uint8_t)PARA_READ_VALUE_ONLY ) || ( operationType == (uint8_t)PARA_READ ))
+   //{
+      //*paraValue = OSReadEEPromWord((unsigned int *)EA_DP1_RANGE);
+	  //return FormatInteger( *paraValue );
+   //}
+   //else if( operationType == (uint8_t)PARA_WRITE || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY)
+   //{
+         //if( *paraValue < 0 )
+            //*paraValue = 0; // roll over
+   //}
+   //else if( operationType == (uint8_t)PARA_DEFAULT )
+   //{
+	   //*paraValue = D_DP1_RANGE;
+   //}
+   //
+   //OSWriteEEPromWord((unsigned int *)EA_DP1_RANGE, *paraValue);
+   //
+   //if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
+      //return NULL;
+   //return FormatInteger( *paraValue );
 }
 
 //static char * PresAbsSensMinCnt(uint8_t operationType, int16_t * paraValue )
@@ -3820,50 +3860,54 @@ static char * PresAbsRange(uint8_t operationType, int16_t * paraValue )
 
 static char * PresDiffRange(uint8_t operationType, int16_t * paraValue )
 {
-	if(( operationType == (uint8_t)PARA_READ_VALUE_ONLY ) || ( operationType == (uint8_t)PARA_READ ))
-	{
-		*paraValue = OSReadEEPromWord((unsigned int *)EA_DP2_RANGE);
-		return FormatInteger( *paraValue );
-	}
-	else if( operationType == (uint8_t)PARA_WRITE || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY)
-	{
-		if( *paraValue < 0 )
-		*paraValue = 0; // roll over
-	}
-	else if( operationType == (uint8_t)PARA_DEFAULT )
-	{
-		*paraValue = D_DP2_RANGE;
-	}
+	return ParaSetfloatVal( operationType, paraValue, EA_DP2_RANGE, D_DP2_RANGE, MIN_DP2_RANGE, MAX_DP2_RANGE );
 	
-	OSWriteEEPromWord((unsigned int *)EA_DP2_RANGE, *paraValue);
-	
-	if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	return NULL;
-	return FormatInteger( *paraValue );
+	//if(( operationType == (uint8_t)PARA_READ_VALUE_ONLY ) || ( operationType == (uint8_t)PARA_READ ))
+	//{
+		//*paraValue = OSReadEEPromWord((unsigned int *)EA_DP2_RANGE);
+		//return FormatInteger( *paraValue );
+	//}
+	//else if( operationType == (uint8_t)PARA_WRITE || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY)
+	//{
+		//if( *paraValue < 0 )
+		//*paraValue = 0; // roll over
+	//}
+	//else if( operationType == (uint8_t)PARA_DEFAULT )
+	//{
+		//*paraValue = D_DP2_RANGE;
+	//}
+	//
+	//OSWriteEEPromWord((unsigned int *)EA_DP2_RANGE, *paraValue);
+	//
+	//if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
+	//return NULL;
+	//return FormatInteger( *paraValue );
 }
 
 static char * PresDiff3Range(uint8_t operationType, int16_t * paraValue )
 {
-	if(( operationType == (uint8_t)PARA_READ_VALUE_ONLY ) || ( operationType == (uint8_t)PARA_READ ))
-	{
-		*paraValue = OSReadEEPromWord((unsigned int *)EA_DP3_RANGE);
-		return FormatInteger( *paraValue );
-	}
-	else if( operationType == (uint8_t)PARA_WRITE || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY)
-	{
-		if( *paraValue < 0 )
-		*paraValue = 0; // roll over
-	}
-	else if( operationType == (uint8_t)PARA_DEFAULT )
-	{
-		*paraValue = D_DP3_RANGE;
-	}
+	return ParaSetfloatVal( operationType, paraValue, EA_DP3_RANGE, D_DP3_RANGE, MIN_DP3_RANGE, MAX_DP3_RANGE );
 	
-	OSWriteEEPromWord((unsigned int *)EA_DP3_RANGE, *paraValue);
-	
-	if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	return NULL;
-	return FormatInteger( *paraValue );
+	//if(( operationType == (uint8_t)PARA_READ_VALUE_ONLY ) || ( operationType == (uint8_t)PARA_READ ))
+	//{
+		//*paraValue = OSReadEEPromWord((unsigned int *)EA_DP3_RANGE);
+		//return FormatInteger( *paraValue );
+	//}
+	//else if( operationType == (uint8_t)PARA_WRITE || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY)
+	//{
+		//if( *paraValue < 0 )
+		//*paraValue = 0; // roll over
+	//}
+	//else if( operationType == (uint8_t)PARA_DEFAULT )
+	//{
+		//*paraValue = D_DP3_RANGE;
+	//}
+	//
+	//OSWriteEEPromWord((unsigned int *)EA_DP3_RANGE, *paraValue);
+	//
+	//if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
+	//return NULL;
+	//return FormatInteger( *paraValue );
 }
 
 static char * TimeHourPara( uint8_t operationType, int16_t * paraValue )
@@ -4137,6 +4181,36 @@ static char * DiffPres3ZeroRangePara(uint8_t operationType, int16_t * paraValue 
 static char * AbsPresZeroAdjustPara(uint8_t operationType, int16_t * paraValue )
 {
    return ParaSetfloatVal( operationType, paraValue, EA_DP1_ZERO_ADJ, D_DP1_ZERO_ADJ, MIN_DP1_ZERO_ADJ, MAX_DP1_ZERO_ADJ );
+}
+
+static char * PresRange1AdjPara(uint8_t operationType, int16_t * paraValue )
+{
+	return ParaSetfloatVal( operationType, paraValue, EA_DP_RANGE1_ADJ, 0, -1000, 1000 );
+}
+
+static char * PresRange2AdjPara(uint8_t operationType, int16_t * paraValue )
+{
+	return ParaSetfloatVal( operationType, paraValue, EA_DP_RANGE2_ADJ, 0, -1000, 1000 );
+}
+
+static char * PresRange3AdjPara(uint8_t operationType, int16_t * paraValue )
+{
+	return ParaSetfloatVal( operationType, paraValue, EA_DP_RANGE3_ADJ, 0, -1000, 1000 );
+}
+
+static char * PresRange4AdjPara(uint8_t operationType, int16_t * paraValue )
+{
+	return ParaSetfloatVal( operationType, paraValue, EA_DP_RANGE4_ADJ, 0, -1000, 1000 );
+}
+
+static char * PresRange5AdjPara(uint8_t operationType, int16_t * paraValue )
+{
+	return ParaSetfloatVal( operationType, paraValue, EA_DP_RANGE5_ADJ, 0, -1000, 1000 );
+}
+
+static char * PresRange6AdjPara(uint8_t operationType, int16_t * paraValue )
+{
+	return ParaSetfloatVal( operationType, paraValue, EA_DP_RANGE6_ADJ, 0, -1000, 1000 );
 }
 
 static char * DiffPresZeroAdjustPara(uint8_t operationType, int16_t * paraValue )

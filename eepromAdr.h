@@ -188,6 +188,12 @@
 #define EA_DP3_MANP_THRESHOLD                    (310*2)
 #define EA_DP3_MANP_MAX_LIMIT                    (311*2)
 #define EA_DOOR_ALM_TIME_SET                     (312*2)
+#define EA_DP_RANGE1_ADJ	                     (313*2)
+#define EA_DP_RANGE2_ADJ					    (314*2)
+#define EA_DP_RANGE3_ADJ						 (315*2)
+#define EA_DP_RANGE4_ADJ						(316*2)
+#define EA_DP_RANGE5_ADJ						(317*2)
+#define EA_DP_RANGE6_ADJ						(318*2)
 
 #endif
 

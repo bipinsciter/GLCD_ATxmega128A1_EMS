@@ -112,7 +112,7 @@ static int paraValue;
 static uint8_t rxDataLen[2]={0}, rxMode=0, msgRcvd=0, RxTimeout=0;
 static uint8_t rxMode1=0, msgRcvd1=0, RxTimeout1=0;
 
-uint8_t u8_resetTimer=0,u8_DFUresetTimer=0;
+uint8_t u8_resetTimer=0,u8_DFUresetTimer=0,gu8_SetBySerial=0;
 	
 TimerHandle_t xBaseTimer;
 
@@ -351,6 +351,11 @@ void UARTC1RxTimeout(void)
 			rxDataLen[1]=0;
 		}
 	}
+}
+
+uint8_t CheckSerialSet(void)
+{
+	return gu8_SetBySerial;
 }
 
 void SerialInterfaceTask( void )
@@ -602,7 +607,9 @@ void SerialInterfaceTask( void )
 					break;
 					default:
 						
+						gu8_SetBySerial=1;
 						ch = GetParameter( rxDataBuffer[Ind][2], &paraValue );
+						gu8_SetBySerial=0;
 							
 						txDataBuffer[0] = ch;
 						txDataBuffer[1] = rxDataBuffer[Ind][2];
@@ -692,7 +699,9 @@ void SerialInterfaceTask( void )
 							break;
 						}
 						paraValue = atoi( &rxDataBuffer[Ind][3] );
+						gu8_SetBySerial=1;
 						ch = SetParameter( rxDataBuffer[Ind][2], &paraValue );
+						gu8_SetBySerial=0;
 						txDataBuffer[0] = ch;
 						txDataBuffer[1] = rxDataBuffer[Ind][2];
 						if( ch != ERROR_OK )

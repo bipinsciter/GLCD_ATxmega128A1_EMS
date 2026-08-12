@@ -198,7 +198,12 @@ typedef enum
 	DP3_MANP_THRESHOLD			= 190,
 	DP3_MANP_MAX_LIMIT			= 191,
 	DOOR_ALARM_TIME  			= 192,
-	
+	DP_RANGE1_ADJ  				= 193,
+	DP_RANGE2_ADJ  				= 194,
+	DP_RANGE3_ADJ  				= 195,
+	DP_RANGE4_ADJ  				= 196,
+	DP_RANGE5_ADJ  				= 197,
+	DP_RANGE6_ADJ  				= 198,
 	
 }PARAMETER;
 

@@ -93,6 +93,49 @@ void clearDooralarm(void)
 	alarmOut.alarm.door=0;
 }
 
+#define WINDOW_SIZE  9   // must be odd, <= 39
+
+int lastParaValue[TOTAL_VAL_INDEX] = {0};
+static uint8_t ignoreCnter[TOTAL_VAL_INDEX]={0};
+static int buffer[TOTAL_VAL_INDEX][WINDOW_SIZE]={0};
+static int sorted[TOTAL_VAL_INDEX][WINDOW_SIZE]={0};   // temp buffer (global, no stack use)
+
+static unsigned char index[TOTAL_VAL_INDEX] = {0};
+static unsigned char count[TOTAL_VAL_INDEX] = {0};
+
+int median_filter(uint8_t para, int new_sample)
+{
+	unsigned char i, j;
+	int key;
+
+	// Insert into circular buffer
+	buffer[para][index[para]++] = new_sample;
+	if (index[para] >= WINDOW_SIZE)
+	index[para] = 0;
+
+	if (count[para] < WINDOW_SIZE)
+	count[para]++;
+
+	// Copy active elements into sorted array
+	for (i = 0; i < count[para]; i++)
+	sorted[para][i] = buffer[para][i];
+
+	// Insertion sort (in-place on sorted[])
+	for (i = 1; i < count[para]; i++) {
+		key = sorted[para][i];
+		j = i;
+
+		while (j > 0 && sorted[para][j - 1] > key) {
+			sorted[para][j] = sorted[para][j - 1];
+			j--;
+		}
+		sorted[para][j] = key;
+	}
+
+	// Return median
+	return sorted[para][count[para] >> 1]; // divide by 2
+}
+
 
 #define DP_SW_FACT_DIVISION		10
 static int16_t su16_dpAlmdiff[3]={0},su16_convertedValue[3]={0},LastDPManpThreshold[3]={0},LastDPManLimit[3]={0};
@@ -119,20 +162,54 @@ void clearDp3ManpPara(void)
 void DEVICEIO_FUNC_NAME( void )
 {
 	uint8_t retVal;
-	//uint16_t value1=0;
-	int value;//, temprValue;
-	int convertedValue;
+	int value;
+	int convertedValue, diff=0;
 	static uint16_t TempfireAlmTimer=0,TempAlmTimer=0;
 	
-		
 	systemError = ERROR_OK;
 
 	if (IsDP1Enabled())
 	{
 		retVal = GetSensorDP1( &value );
-		sensorVal[DP1_VAL_INDEX].rawValue = value;
-		  
-		convertedValue = value - GetParameterValue(DP1_ZERO_ADJ);
+		
+		//------------------------------------------------------------------------------
+		// Convert the value to unit
+		if ( retVal == ERROR_OK )
+		{
+			sensorVal[DP1_VAL_INDEX].rawValue = value;
+			convertedValue = value - GetParameterValue(DP1_ZERO_ADJ);
+		}
+		else
+		{
+			sensorVal[DP1_VAL_INDEX].rawValue = value = convertedValue = 0;
+			ignoreCnter[DP1_VAL_INDEX]=0;
+			Kalman_Init(&Kalmanfilter[DP1_VAL_INDEX], 0.01, 0.1, 0.0);  // Initialize with default values
+			for(uint8_t i=0; i<WINDOW_SIZE; i++) 
+			{
+				buffer[DP1_VAL_INDEX][i]=0;
+				sorted[DP1_VAL_INDEX][i]=0;
+			}
+		}
+		
+		convertedValue = median_filter(DP1_VAL_INDEX,convertedValue);
+		
+		if(ignoreCnter[DP1_VAL_INDEX]<15)
+		{
+			AveragePara(DP1_VAL_INDEX, retVal, value, convertedValue );
+			lastParaValue[DP1_VAL_INDEX]=convertedValue;
+			ignoreCnter[DP1_VAL_INDEX]++;
+		}
+		else
+		{
+			diff = convertedValue-lastParaValue[DP1_VAL_INDEX];
+			if(diff<1000)
+			{
+				convertedValue = convertedValue + (0.02 * diff);
+				AveragePara(DP1_VAL_INDEX, retVal, value, convertedValue );
+				lastParaValue[DP1_VAL_INDEX]=convertedValue;
+			}
+		}
+		//------------------------------------------------------------------------------
 		
 		if(GetParameterValue(DP1_MANP_THRESHOLD) != LastDPManpThreshold[0])
 		{
@@ -177,107 +254,107 @@ void DEVICEIO_FUNC_NAME( void )
 		AveragePara(DP1_VAL_INDEX, retVal, value, convertedValue );
 	}
 		
-	if (IsDP2Enabled())
-	{
-		retVal = GetSensorDP2( &value );
-		sensorVal[DP2_VAL_INDEX].rawValue = value;
-		 
-		// Convert the value to PSI
-		convertedValue = value - GetParameterValue(DP2_ZERO_ADJ);
-		
-		if(GetParameterValue(DP2_MANP_THRESHOLD) != LastDPManpThreshold[1])
-		{
-			LastDPManpThreshold[1] = GetParameterValue(DP2_MANP_THRESHOLD);
-			clearDp1ManpPara();
-		}
-		
-		if(GetParameterValue(DP2_MANP_MAX_LIMIT) != LastDPManLimit[1])
-		{
-			LastDPManLimit[1] = GetParameterValue(DP2_MANP_MAX_LIMIT);
-			clearDp1ManpPara();
-		}
-		
-		if(GetParameterValue(DP2_MANP_THRESHOLD)>100)
-		{
-			su16_dpAlmdiff[1] = GetParameterValue(DP2_MANP_MAX_LIMIT);
-			
-			if(dp_sw_factor_add[1])
-			{
-				if(convertedValue < GetParameterValue(DP2_MANP_THRESHOLD))
-				{
-					if(gu8_dp_sw_factor_add_cnt[1]<DP_SW_FACT_DIVISION)
-					{
-						su16_convertedValue[1] += (su16_dpAlmdiff[1]/DP_SW_FACT_DIVISION);
-						gu8_dp_sw_factor_add_cnt[1]++;
-					}
-				}
-				else
-				{
-					if(gu8_dp_sw_factor_add_cnt[1])
-					{
-						su16_convertedValue[1] -= (su16_dpAlmdiff[1]/DP_SW_FACT_DIVISION);
-						gu8_dp_sw_factor_add_cnt[1]--;
-					}
-				}
-				
-				dp_sw_factor_add[1] = 0;
-			}
-			convertedValue += su16_convertedValue[1];
-		}
-		
-		AveragePara(DP2_VAL_INDEX, retVal, value, convertedValue );
-	}
-	  
-	if (IsDP3Enabled())
-	{
-		retVal = GetSensorDP3( &value );
-		sensorVal[DP3_VAL_INDEX].rawValue = value;
-		
-		// Convert the value to PSI
-		convertedValue = value - GetParameterValue(DP3_ZERO_ADJ);		
-		
-		if(GetParameterValue(DP3_MANP_THRESHOLD) != LastDPManpThreshold[2])
-		{
-			LastDPManpThreshold[2] = GetParameterValue(DP3_MANP_THRESHOLD);
-			clearDp1ManpPara();
-		}
-		
-		if(GetParameterValue(DP3_MANP_MAX_LIMIT) != LastDPManLimit[2])
-		{
-			LastDPManLimit[2] = GetParameterValue(DP3_MANP_MAX_LIMIT);
-			clearDp1ManpPara();
-		}
-		
-		if(GetParameterValue(DP3_MANP_THRESHOLD)>100)
-		{
-			su16_dpAlmdiff[2] = GetParameterValue(DP3_MANP_MAX_LIMIT);
-		
-			if(dp_sw_factor_add[2])
-			{
-				if(convertedValue < GetParameterValue(DP3_MANP_THRESHOLD))
-				{
-					if(gu8_dp_sw_factor_add_cnt[2]<DP_SW_FACT_DIVISION)
-					{
-						su16_convertedValue[2] += (su16_dpAlmdiff[2]/DP_SW_FACT_DIVISION);
-						gu8_dp_sw_factor_add_cnt[2]++;
-					}
-				}
-				else
-				{
-					if(gu8_dp_sw_factor_add_cnt[2])
-					{
-						su16_convertedValue[2] -= (su16_dpAlmdiff[2]/DP_SW_FACT_DIVISION);
-						gu8_dp_sw_factor_add_cnt[2]--;
-					}
-				}
-			
-				dp_sw_factor_add[2] = 0;
-			}
-			convertedValue += su16_convertedValue[2];
-		}
-		
-		AveragePara(DP3_VAL_INDEX, retVal, value, convertedValue );
-	}
+	//if (IsDP2Enabled())
+	//{
+		//retVal = GetSensorDP2( &value );
+		//sensorVal[DP2_VAL_INDEX].rawValue = value;
+		 //
+		//// Convert the value to PSI
+		//convertedValue = value - GetParameterValue(DP2_ZERO_ADJ);
+		//
+		//if(GetParameterValue(DP2_MANP_THRESHOLD) != LastDPManpThreshold[1])
+		//{
+			//LastDPManpThreshold[1] = GetParameterValue(DP2_MANP_THRESHOLD);
+			//clearDp1ManpPara();
+		//}
+		//
+		//if(GetParameterValue(DP2_MANP_MAX_LIMIT) != LastDPManLimit[1])
+		//{
+			//LastDPManLimit[1] = GetParameterValue(DP2_MANP_MAX_LIMIT);
+			//clearDp1ManpPara();
+		//}
+		//
+		//if(GetParameterValue(DP2_MANP_THRESHOLD)>100)
+		//{
+			//su16_dpAlmdiff[1] = GetParameterValue(DP2_MANP_MAX_LIMIT);
+			//
+			//if(dp_sw_factor_add[1])
+			//{
+				//if(convertedValue < GetParameterValue(DP2_MANP_THRESHOLD))
+				//{
+					//if(gu8_dp_sw_factor_add_cnt[1]<DP_SW_FACT_DIVISION)
+					//{
+						//su16_convertedValue[1] += (su16_dpAlmdiff[1]/DP_SW_FACT_DIVISION);
+						//gu8_dp_sw_factor_add_cnt[1]++;
+					//}
+				//}
+				//else
+				//{
+					//if(gu8_dp_sw_factor_add_cnt[1])
+					//{
+						//su16_convertedValue[1] -= (su16_dpAlmdiff[1]/DP_SW_FACT_DIVISION);
+						//gu8_dp_sw_factor_add_cnt[1]--;
+					//}
+				//}
+				//
+				//dp_sw_factor_add[1] = 0;
+			//}
+			//convertedValue += su16_convertedValue[1];
+		//}
+		//
+		//AveragePara(DP2_VAL_INDEX, retVal, value, convertedValue );
+	//}
+	  //
+	//if (IsDP3Enabled())
+	//{
+		//retVal = GetSensorDP3( &value );
+		//sensorVal[DP3_VAL_INDEX].rawValue = value;
+		//
+		//// Convert the value to PSI
+		//convertedValue = value - GetParameterValue(DP3_ZERO_ADJ);		
+		//
+		//if(GetParameterValue(DP3_MANP_THRESHOLD) != LastDPManpThreshold[2])
+		//{
+			//LastDPManpThreshold[2] = GetParameterValue(DP3_MANP_THRESHOLD);
+			//clearDp1ManpPara();
+		//}
+		//
+		//if(GetParameterValue(DP3_MANP_MAX_LIMIT) != LastDPManLimit[2])
+		//{
+			//LastDPManLimit[2] = GetParameterValue(DP3_MANP_MAX_LIMIT);
+			//clearDp1ManpPara();
+		//}
+		//
+		//if(GetParameterValue(DP3_MANP_THRESHOLD)>100)
+		//{
+			//su16_dpAlmdiff[2] = GetParameterValue(DP3_MANP_MAX_LIMIT);
+		//
+			//if(dp_sw_factor_add[2])
+			//{
+				//if(convertedValue < GetParameterValue(DP3_MANP_THRESHOLD))
+				//{
+					//if(gu8_dp_sw_factor_add_cnt[2]<DP_SW_FACT_DIVISION)
+					//{
+						//su16_convertedValue[2] += (su16_dpAlmdiff[2]/DP_SW_FACT_DIVISION);
+						//gu8_dp_sw_factor_add_cnt[2]++;
+					//}
+				//}
+				//else
+				//{
+					//if(gu8_dp_sw_factor_add_cnt[2])
+					//{
+						//su16_convertedValue[2] -= (su16_dpAlmdiff[2]/DP_SW_FACT_DIVISION);
+						//gu8_dp_sw_factor_add_cnt[2]--;
+					//}
+				//}
+			//
+				//dp_sw_factor_add[2] = 0;
+			//}
+			//convertedValue += su16_convertedValue[2];
+		//}
+		//
+		//AveragePara(DP3_VAL_INDEX, retVal, value, convertedValue );
+	//}
 		
 	oldAlarmOut.alarmByte = alarmOut.alarmByte;
 	if (IsAlarmEnabled())
@@ -852,20 +929,14 @@ void GetInput( uint8_t * retVal )
    *retVal = inputs; 
 }
 
-/*
-   TempRH IO Task
- */
-
-//static OSSemaMutex TempRHMutex;
-
 uint16_t tempDelay = 1000;
 
 void TEMPRHIO_FUNC_NAME( void )
 {
 	uint8_t retVal = -1, checkSum;
 	unsigned int value, value1;
-	int convertedValue;
-		
+	int convertedValue, diff=0;
+	
 	if( GetParameterValue(TEMP_RH_SENS_TYPE) == TEMP_RH_SENS_SHT25 )
 	{
 		if (IsTemperatureEnabled())
@@ -880,8 +951,33 @@ void TEMPRHIO_FUNC_NAME( void )
 			else
 			{
 				value = convertedValue = 0;
+				ignoreCnter[TEMPERATURE_VAL_INDEX]=0;
+				Kalman_Init(&Kalmanfilter[TEMPERATURE_VAL_INDEX], 0.01, 0.1, 0.0);  // Initialize with default values
+				for(uint8_t i=0; i<WINDOW_SIZE; i++)
+				{
+					buffer[TEMPERATURE_VAL_INDEX][i]=0;
+					sorted[TEMPERATURE_VAL_INDEX][i]=0;
+				}
 			}
-			AveragePara(TEMPERATURE_VAL_INDEX, retVal, value, convertedValue );
+			
+			convertedValue = median_filter(TEMPERATURE_VAL_INDEX,convertedValue);
+			
+			if(ignoreCnter[TEMPERATURE_VAL_INDEX]<15)
+			{
+				AveragePara(TEMPERATURE_VAL_INDEX, retVal, value, convertedValue );
+				lastParaValue[TEMPERATURE_VAL_INDEX]=convertedValue;
+				ignoreCnter[TEMPERATURE_VAL_INDEX]++;
+			}
+			else
+			{
+				diff = convertedValue-lastParaValue[TEMPERATURE_VAL_INDEX];
+				if(diff<1000)
+				{
+					convertedValue = convertedValue + (0.02 * diff);
+					AveragePara(TEMPERATURE_VAL_INDEX, retVal, value, convertedValue );
+					lastParaValue[TEMPERATURE_VAL_INDEX]=convertedValue;
+				}
+			}
 		}
 
 		if (IsHumidityEnabled())
@@ -896,8 +992,33 @@ void TEMPRHIO_FUNC_NAME( void )
 			else
 			{
 				value = convertedValue = 0;
+				ignoreCnter[HUMIDITY_VAL_INDEX]=0;
+				Kalman_Init(&Kalmanfilter[HUMIDITY_VAL_INDEX], 0.01, 0.1, 0.0);  // Initialize with default values
+				for(uint8_t i=0; i<WINDOW_SIZE; i++)
+				{
+					buffer[HUMIDITY_VAL_INDEX][i]=0;
+					sorted[HUMIDITY_VAL_INDEX][i]=0;
+				}
 			}
-			AveragePara(HUMIDITY_VAL_INDEX, retVal, value, convertedValue );
+			
+			convertedValue = median_filter(HUMIDITY_VAL_INDEX,convertedValue);
+			
+			if(ignoreCnter[HUMIDITY_VAL_INDEX]<15)
+			{
+				AveragePara(HUMIDITY_VAL_INDEX, retVal, value, convertedValue );
+				lastParaValue[HUMIDITY_VAL_INDEX]=convertedValue;
+				ignoreCnter[HUMIDITY_VAL_INDEX]++;
+			}
+			else
+			{
+				diff = convertedValue-lastParaValue[HUMIDITY_VAL_INDEX];
+				if(diff<1000)
+				{
+					convertedValue = convertedValue + (0.02 * diff);
+					AveragePara(HUMIDITY_VAL_INDEX, retVal, value, convertedValue );
+					lastParaValue[HUMIDITY_VAL_INDEX]=convertedValue;
+				}
+			}
 		}
 	}
 	else if( GetParameterValue(TEMP_RH_SENS_TYPE) == TEMP_RH_SENS_IDT_HS3100 )
@@ -912,7 +1033,8 @@ void TEMPRHIO_FUNC_NAME( void )
 		}  
 
 		if(IsTemperatureEnabled())
-		{   /* Timer * 4 */
+		{   
+			// Convert the value to unit
 			if ( retVal == ERROR_OK )
 			{
 				convertedValue = (value * 16500l / 0x3FFF) - 4000 + GetParameterValue(TEMP_ZERO_ADJ);    /* degree C */
@@ -920,12 +1042,37 @@ void TEMPRHIO_FUNC_NAME( void )
 			else
 			{
 				value = convertedValue = 0;
+				ignoreCnter[TEMPERATURE_VAL_INDEX]=0;
+				Kalman_Init(&Kalmanfilter[TEMPERATURE_VAL_INDEX], 0.01, 0.1, 0.0);  // Initialize with default values
+				for(uint8_t i=0; i<WINDOW_SIZE; i++)
+				{
+					buffer[TEMPERATURE_VAL_INDEX][i]=0;
+					sorted[TEMPERATURE_VAL_INDEX][i]=0;
+				}
 			}
-			AveragePara(TEMPERATURE_VAL_INDEX, retVal, value, convertedValue );
+			
+			convertedValue = median_filter(TEMPERATURE_VAL_INDEX, convertedValue);
+			
+			if(ignoreCnter[TEMPERATURE_VAL_INDEX]<15)
+			{
+				AveragePara(TEMPERATURE_VAL_INDEX, retVal, value, convertedValue );
+				lastParaValue[TEMPERATURE_VAL_INDEX]=convertedValue;
+				ignoreCnter[TEMPERATURE_VAL_INDEX]++;
+			}
+			else
+			{
+				diff = convertedValue-lastParaValue[TEMPERATURE_VAL_INDEX];
+				if(diff<1000)
+				{
+					convertedValue = convertedValue + (0.02 * diff);
+					AveragePara(TEMPERATURE_VAL_INDEX, retVal, value, convertedValue );
+					lastParaValue[TEMPERATURE_VAL_INDEX]=convertedValue;
+				}
+			}
 		}
 		
 		if (IsHumidityEnabled())
-		{  /* Timer * 3 */
+		{  
 			// Convert the value to unit
 			if ( retVal == ERROR_OK )
 			{
@@ -934,79 +1081,35 @@ void TEMPRHIO_FUNC_NAME( void )
 			else
 			{
 				value1 = convertedValue = 0;
+				ignoreCnter[HUMIDITY_VAL_INDEX]=0;
+				Kalman_Init(&Kalmanfilter[HUMIDITY_VAL_INDEX], 0.01, 0.1, 0.0);  // Initialize with default values
+				for(uint8_t i=0; i<WINDOW_SIZE; i++)
+				{
+					buffer[HUMIDITY_VAL_INDEX][i]=0;
+					sorted[HUMIDITY_VAL_INDEX][i]=0;
+				}
 			}
 			
-			AveragePara(HUMIDITY_VAL_INDEX, retVal, value1, convertedValue );
+			convertedValue = median_filter(HUMIDITY_VAL_INDEX, convertedValue);
+			
+			if(ignoreCnter[HUMIDITY_VAL_INDEX]<15)
+			{
+				AveragePara(HUMIDITY_VAL_INDEX, retVal, value1, convertedValue );
+				lastParaValue[HUMIDITY_VAL_INDEX]=convertedValue;
+				ignoreCnter[HUMIDITY_VAL_INDEX]++;
+			}
+			else
+			{
+				diff = convertedValue-lastParaValue[HUMIDITY_VAL_INDEX];
+				if(diff<1000)
+				{
+					convertedValue = convertedValue + (0.02 * diff);
+					AveragePara(HUMIDITY_VAL_INDEX, retVal, value1, convertedValue );
+					lastParaValue[HUMIDITY_VAL_INDEX]=convertedValue;
+				}
+			}
 		}
 	}
-	//====================================================================================================
-	if( GetParameterValue(TEMP_RH2_SENS_TYPE) == TEMP_RH_SENS_SHT25 )
-	{
-		if(IsTemperature2Enabled())
-		{
-			//----------------------------------------------------------------------
-			retVal = GetSensorSHT25Temperature(1, &value, &checkSum );
-				
-			// Convert the value to unit
-			if ( retVal == ERROR_OK )
-			{
-				convertedValue = value + GetParameterValue(TEMP2_ZERO_ADJ);
-			}
-			else
-			{
-				value = convertedValue = 0;
-			}
-			AveragePara(TEMPERATURE2_VAL_INDEX, retVal, value, convertedValue );
-	
-			retVal = GetSensorSHT25Humidity(1, &value, &checkSum );
-				
-			// Convert the value to unit
-			if ( retVal == ERROR_OK )
-			{
-				convertedValue = value + GetParameterValue(RH2_ZERO_ADJ);
-			}
-			else
-			{
-				value = convertedValue = 0;
-			}
-			AveragePara(HUMIDITY2_VAL_INDEX, retVal, value, convertedValue );
-		}
-	}
-	else if( GetParameterValue(TEMP_RH2_SENS_TYPE) == TEMP_RH_SENS_IDT_HS3100 )
-	{
-		if(IsTemperature2Enabled())
-		{
-			StartSensor_IDT_HS3100(1);
-				
-			_delay_ms(500);
-				
-			retVal = GetSensorReadings_IDT_HS3100(1, &value, &value1 );
-
-			if ( retVal == ERROR_OK )
-			{
-				convertedValue = (value * 16500l / 0x3FFF) - 4000 + GetParameterValue(TEMP2_ZERO_ADJ);    /* degree C */
-			}
-			else
-			{
-				value = convertedValue = 0;
-			}
-			AveragePara(TEMPERATURE2_VAL_INDEX, retVal, value, convertedValue );
-	
-			// Convert the value to unit
-			if ( retVal == ERROR_OK )
-			{
-				convertedValue = (value1 * 10000l / 0x3FFF) + GetParameterValue(RH2_ZERO_ADJ);
-			}
-			else
-			{
-				value1 = convertedValue = 0;
-			}
-				
-			AveragePara(HUMIDITY2_VAL_INDEX, retVal, value1, convertedValue );
-		}
-	}
-
-	//OSSleep(250);
 }
 
 static void AveragePara( uint8_t SenNo, uint8_t error, unsigned int rawVal, int convertedVal )

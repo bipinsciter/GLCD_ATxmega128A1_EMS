@@ -465,8 +465,6 @@ int main(void)                 // Main runs under the AvrX Stack
 	cli();
 	
 	Reset_Init();
-
-	//OSInit(); 
    
 	InitSystemClock();	
    
@@ -508,14 +506,11 @@ int main(void)                 // Main runs under the AvrX Stack
 		//put_char(&USARTC0, 'D' );
 	}
 	
-	
 	PMIC.CTRL = PMIC_HILVLEN_bm | PMIC_MEDLVLEN_bm | PMIC_LOLVLEN_bm;
 	sei();		//Global Interrupt Enable
 
 	Init_InternalRTC();
 	
-	//OSStart();                   // Start OS switching
-   
 	while(1)
 	{
 		wdt_reset();
