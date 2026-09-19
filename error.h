@@ -12,6 +12,5 @@
 #define ERROR_RTC_I2C					15
 #define ERROR_PARA_INVALID				16
 #define ERROR_DP3_SENS_I2C 				17
-#define ERROR_PARTICAL_SENS_I2C	 		18
 
 #endif

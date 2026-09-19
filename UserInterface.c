@@ -46,9 +46,8 @@
 #include "error.h"
 #include "eepromAdr.h" 
 #include "rtc.h" 
-#include "pid.h"
 
-#define SOFTWARE_VERSION        300
+#define SOFTWARE_VERSION        301
 
 #define EEPROM_WRITE_TIMEOUT	30
 
@@ -570,14 +569,6 @@ static char * PresAbsUpperAlarmOffPara( uint8_t operationType, int16_t * paraVal
 static char * PresAbsUpperAlarmOnPara( uint8_t operationType, int16_t * paraValue );
 static char * PresAbsLowerAlarmOffPara( uint8_t operationType, int16_t * paraValue );
 static char * PresAbsLowerAlarmOnPara( uint8_t operationType, int16_t * paraValue );
-static char * PresDiffUpperAlarmOffPara( uint8_t operationType, int16_t * paraValue );
-static char * PresDiffUpperAlarmOnPara( uint8_t operationType, int16_t * paraValue );
-static char * PresDiffLowerAlarmOffPara( uint8_t operationType, int16_t * paraValue );
-static char * PresDiffLowerAlarmOnPara( uint8_t operationType, int16_t * paraValue );
-static char * PresDiff3UpperAlarmOffPara( uint8_t operationType, int16_t * paraValue );
-static char * PresDiff3UpperAlarmOnPara( uint8_t operationType, int16_t * paraValue );
-static char * PresDiff3LowerAlarmOffPara( uint8_t operationType, int16_t * paraValue );
-static char * PresDiff3LowerAlarmOnPara( uint8_t operationType, int16_t * paraValue );
 static char * TempUpperAlarmOffPara( uint8_t operationType, int16_t * paraValue );
 static char * TempUpperAlarmOnPara( uint8_t operationType, int16_t * paraValue );
 static char * TempLowerAlarmOffPara( uint8_t operationType, int16_t * paraValue );
@@ -594,44 +585,14 @@ static char * TimeSecondPara( uint8_t operationType, int16_t * paraValue );
 static char * DateYearPara( uint8_t operationType, int16_t * paraValue );
 static char * DateMonthPara( uint8_t operationType, int16_t * paraValue );
 static char * DateDayPara( uint8_t operationType, int16_t * paraValue );
-static char * PresAbsValForMinimumOutputPara( uint8_t operationType, int16_t * paraValue );
-static char * PresAbsValForMaximumOutputPara( uint8_t operationType, int16_t * paraValue );
-static char * PresDiffValForMinimumOutputPara( uint8_t operationType, int16_t * paraValue );
-static char * PresDiffValForMaximumOutputPara( uint8_t operationType, int16_t * paraValue );
-static char * TempValForMinimumOutputPara( uint8_t operationType, int16_t * paraValue );
-static char * TempValForMaximumOutputPara( uint8_t operationType, int16_t * paraValue );
-static char * HumidityValForMinimumOutputPara( uint8_t operationType, int16_t * paraValue );
-static char * HumidityValForMaximumOutputPara( uint8_t operationType, int16_t * paraValue );
-static char * OutputCountsForPresAbsMinimumPara( uint8_t operationType, int16_t * paraValue );
-static char * OutputCountsForPresAbsMaximumPara( uint8_t operationType, int16_t * paraValue );
-static char * OutputCountsForPresDiffMinimumPara( uint8_t operationType, int16_t * paraValue );
-static char * OutputCountsForPresDiffMaximumPara( uint8_t operationType, int16_t * paraValue );
-static char * OutputCountsForTempMinimumPara( uint8_t operationType, int16_t * paraValue );
-static char * OutputCountsForTempMaximumPara( uint8_t operationType, int16_t * paraValue );
-static char * OutputCountsForHumidityMinimumPara( uint8_t operationType, int16_t * paraValue );
-static char * OutputCountsForHumidityMaximumPara( uint8_t operationType, int16_t * paraValue );
 static char * PressureAbsUnitPara( uint8_t operationType, int16_t * paraValue );
-static char * PressureDiffUnitPara( uint8_t operationType, int16_t * paraValue );
-static char * PressureDiff3UnitPara( uint8_t operationType, int16_t * paraValue );
 static char * TemperatureUnitPara( uint8_t operationType, int16_t * paraValue );
 static char * HumidityUnitPara( uint8_t operationType, int16_t * paraValue );
-//static char * PresAbsAreaPara( uint8_t operationType, int16_t * paraValue );
-//static char * PresDiffAreaPara( uint8_t operationType, int16_t * paraValue );
-//static char * PresDiff3AreaPara( uint8_t operationType, int16_t * paraValue );
 static char * HumidityZeroAdjustPara(uint8_t operationType, int16_t * paraValue );
-static char * Humidity2ZeroAdjustPara(uint8_t operationType, int16_t * paraValue );
 static char * AbsPresZeroRangePara(uint8_t operationType, int16_t * paraValue );
 static char * AbsPresManpThPara(uint8_t operationType, int16_t * paraValue );
 static char * AbsPresManpLmtPara(uint8_t operationType, int16_t * paraValue );
-static char * DiffPresManpThPara(uint8_t operationType, int16_t * paraValue );
-static char * DiffPresManpLmtPara(uint8_t operationType, int16_t * paraValue );
-static char * DiffPres3ManpThPara(uint8_t operationType, int16_t * paraValue );
-static char * DiffPres3ManpLmtPara(uint8_t operationType, int16_t * paraValue );
-static char * DiffPresZeroRangePara(uint8_t operationType, int16_t * paraValue );
-static char * DiffPres3ZeroRangePara(uint8_t operationType, int16_t * paraValue );
 static char * AbsPresZeroAdjustPara(uint8_t operationType, int16_t * paraValue );
-static char * DiffPresZeroAdjustPara(uint8_t operationType, int16_t * paraValue );
-static char * DiffPres3ZeroAdjustPara(uint8_t operationType, int16_t * paraValue );
 
 static char * PresRange1AdjPara(uint8_t operationType, int16_t * paraValue );
 static char * PresRange2AdjPara(uint8_t operationType, int16_t * paraValue );
@@ -641,8 +602,6 @@ static char * PresRange5AdjPara(uint8_t operationType, int16_t * paraValue );
 static char * PresRange6AdjPara(uint8_t operationType, int16_t * paraValue );
 
 static char * TempZeroAdjustPara(uint8_t operationType, int16_t * paraValue );
-static char * Temp2ZeroAdjustPara(uint8_t operationType, int16_t * paraValue );
-static char * TempDiffAlarmPara(uint8_t operationType, int16_t * paraValue );
 static char * TempFireAlmSetPara(uint8_t operationType, int16_t * paraValue );
 static char * TempFireAlmTimePara(uint8_t operationType, int16_t * paraValue );
 static char * DoorAlmTimePara(uint8_t operationType, int16_t * paraValue );
@@ -654,98 +613,24 @@ static char * BroadcastPortPara(uint8_t operationType, int16_t * paraValue );
 static char * SerialBaudratePara(uint8_t operationType, int16_t * paraValue );
 static char * SerialDataStopParityPara(uint8_t operationType, int16_t * paraValue );
 static char * PresAbsRange(uint8_t operationType, int16_t * paraValue );
-static char * PresDiffRange(uint8_t operationType, int16_t * paraValue );
-static char * PresDiff3Range(uint8_t operationType, int16_t * paraValue );
-//static char * PresAbsSensMinCnt(uint8_t operationType, int16_t * paraValue );
-//static char * PresAbsSensMaxCnt(uint8_t operationType, int16_t * paraValue );
-//static char * PresDiffSensMinCnt(uint8_t operationType, int16_t * paraValue );
-//static char * PresDiffSensMaxCnt(uint8_t operationType, int16_t * paraValue );
-//static char * PresDiff3SensMinCnt(uint8_t operationType, int16_t * paraValue );
-//static char * PresDiff3SensMaxCnt(uint8_t operationType, int16_t * paraValue );
 static char * BuzzerOnPara( uint8_t operationType, int16_t * paraValue );
 static char * BuzzerOffPara( uint8_t operationType, int16_t * paraValue );
 static char * BuzzerDisablePara( uint8_t operationType, int16_t * paraValue );
-static char * PresAbsOutputTypePara( uint8_t operationType, int16_t * paraValue );
-static char * PresDiffOutputTypePara( uint8_t operationType, int16_t * paraValue );
-static char * TempOutputTypePara( uint8_t operationType, int16_t * paraValue );
-static char * HumidityOutputTypePara( uint8_t operationType, int16_t * paraValue );
-static char * PresAbsPIDSetpointPara( uint8_t operationType, int16_t * paraValue );
-static char * PresDiffPIDSetpointPara( uint8_t operationType, int16_t * paraValue );
-static char * TempPIDSetpointPara( uint8_t operationType, int16_t * paraValue );
-static char * HumidityPIDSetpointPara( uint8_t operationType, int16_t * paraValue );
-static char * PresAbsPIDStartupPercentPara( uint8_t operationType, int16_t * paraValue );
-static char * PresAbsPIDKpPara( uint8_t operationType, int16_t * paraValue );
-static char * PresAbsPIDTiPara( uint8_t operationType, int16_t * paraValue );
-static char * PresAbsPIDTdPara( uint8_t operationType, int16_t * paraValue );
-static char * PresAbsOutPolarityPara( uint8_t operationType, int16_t * paraValue );
-static char * PresDiffPIDStartupPercentPara( uint8_t operationType, int16_t * paraValue );
-static char * PresDiffPIDKpPara( uint8_t operationType, int16_t * paraValue );
-static char * PresDiffPIDTiPara( uint8_t operationType, int16_t * paraValue );
-static char * PresDiffPIDTdPara( uint8_t operationType, int16_t * paraValue );
-static char * PresDiffOutPolarityPara( uint8_t operationType, int16_t * paraValue );
-static char * TempPIDStartupPercentPara( uint8_t operationType, int16_t * paraValue );
-static char * TempPIDKpPara( uint8_t operationType, int16_t * paraValue );
-static char * TempPIDTiPara( uint8_t operationType, int16_t * paraValue );
-static char * TempPIDTdPara( uint8_t operationType, int16_t * paraValue );
-static char * TempOutPolarityPara( uint8_t operationType, int16_t * paraValue );
-static char * HumidityPIDStartupPercentPara( uint8_t operationType, int16_t * paraValue );
-static char * HumidityPIDKpPara( uint8_t operationType, int16_t * paraValue );
-static char * HumidityPIDTiPara( uint8_t operationType, int16_t * paraValue );
-static char * HumidityPIDTdPara( uint8_t operationType, int16_t * paraValue );
-static char * HumidityOutPolarityPara( uint8_t operationType, int16_t * paraValue );
 static char * TempRHSensTypePara( uint8_t operationType, int16_t * paraValue );
-static char * TempRH2SensTypePara( uint8_t operationType, int16_t * paraValue );
-//static char * ParticalAlarmSetupPara( uint8_t operationType, int16_t * paraValue );
 static char * ROOMIdPara(uint8_t operationType, int16_t * paraValue );
 static char * AHUIdPara(uint8_t operationType, int16_t * paraValue );
-static char * AHUCFMPara(uint8_t operationType, int16_t * paraValue );
-static char * AHUArea1Para(uint8_t operationType, int16_t * paraValue );
-static char * AHUArea2Para(uint8_t operationType, int16_t * paraValue );
-static char * AHUArea3Para(uint8_t operationType, int16_t * paraValue );
 
 static char * DP1AreaTypePara( uint8_t operationType, int16_t * paraValue );
-static char * DP2AreaTypePara( uint8_t operationType, int16_t * paraValue );
-static char * DP3AreaTypePara( uint8_t operationType, int16_t * paraValue );
 static char * DP1AreaLengthPara( uint8_t operationType, int16_t * paraValue );
-static char * DP2AreaLengthPara( uint8_t operationType, int16_t * paraValue );
-static char * DP3AreaLengthPara( uint8_t operationType, int16_t * paraValue );
 static char * DP1AreaWidthPara( uint8_t operationType, int16_t * paraValue );
-static char * DP2AreaWidthPara( uint8_t operationType, int16_t * paraValue );
-static char * DP3AreaWidthPara( uint8_t operationType, int16_t * paraValue );
 static char * DP1AreaRadiousPara( uint8_t operationType, int16_t * paraValue );
-static char * DP2AreaRadiousPara( uint8_t operationType, int16_t * paraValue );
-static char * DP3AreaRadiousPara( uint8_t operationType, int16_t * paraValue );
 
 static char * PresAbsAlarmSetupPara( uint8_t operationType, int16_t * paraValue );
-static char * PresDiffAlarmSetupPara( uint8_t operationType, int16_t * paraValue );
-static char * PresDiff3AlarmSetupPara( uint8_t operationType, int16_t * paraValue );
 static char * TempAlarmSetupPara( uint8_t operationType, int16_t * paraValue );
 static char * HumidityAlarmSetupPara( uint8_t operationType, int16_t * paraValue );
 static char * RTCSetupPara( uint8_t operationType, int16_t * paraValue );
-static char * PresAbsOutPolarityPara( uint8_t operationType, int16_t * paraValue );
-static char * PresDiffOutPolarityPara( uint8_t operationType, int16_t * paraValue );
-static char * TempOutPolarityPara( uint8_t operationType, int16_t * paraValue );
-static char * HumidityOutPolarityPara( uint8_t operationType, int16_t * paraValue );
-static char * TempHighPIDRHCascadeFactorPara( uint8_t operationType, int16_t * paraValue );
-static char * TempHighPIDRHCascadeStatePara( uint8_t operationType, int16_t * paraValue );
-static char * TempLowPIDRHCascadeFactorPara( uint8_t operationType, int16_t * paraValue );
-static char * TempLowPIDRHCascadeStatePara( uint8_t operationType, int16_t * paraValue );
-static char * HumidityHighPIDTempCascadeFactorPara( uint8_t operationType, int16_t * paraValue );
-static char * HumidityHighPIDTempCascadeStatePara( uint8_t operationType, int16_t * paraValue );
-static char * HumidityLowPIDTempCascadeFactorPara( uint8_t operationType, int16_t * paraValue );
-static char * HumidityLowPIDTempCascadeStatePara( uint8_t operationType, int16_t * paraValue );
-static char * TempHighPIDRHAdjustPara( uint8_t operationType, int16_t * paraValue );
-static char * TempLowPIDRHAdjustPara( uint8_t operationType, int16_t * paraValue );
-static char * HumidityHighPIDTempAdjustPara( uint8_t operationType, int16_t * paraValue );
-static char * HumidityLowPIDTempAdjustPara( uint8_t operationType, int16_t * paraValue );
-//static char * TempRHScanTimePara(uint8_t operationType, int16_t * paraValue );
-//static char * TempRHAverageCntPara(uint8_t operationType, int16_t * paraValue );
-//static char * PresAverageCntPara(uint8_t operationType, int16_t * paraValue );
+
 static char * PresAbsSensTypePara(uint8_t operationType, int16_t * paraValue );
-static char * PresDiffSensTypePara(uint8_t operationType, int16_t * paraValue );
-static char * PresDiff3SensTypePara(uint8_t operationType, int16_t * paraValue );
-static char * ParticalSensTypePara(uint8_t operationType, int16_t * paraValue );
-//static char * ParticalSizeTypePara(uint8_t operationType, int16_t * paraValue );
 
 static char * VersionPara(uint8_t operationType, int16_t * paraValue );
 static char * CustomerIDPara(uint8_t operationType, int16_t * paraValue );
@@ -760,29 +645,15 @@ static char * PressureUnitProcessPara( uint8_t operationType, int16_t * paraValu
 static char * ParaSetIntegerVal(uint8_t operationType, int16_t * paraValue, unsigned int eepromAddr, int16_t dfltVal, int16_t minVal, int16_t maxVal );
 static char * ParaSetIntegerVal1(uint8_t operationType, int16_t * paraValue, unsigned int eepromAddr, int16_t dfltVal, int16_t minVal, int16_t maxVal );
 static char * ParaSetfloatVal(uint8_t operationType, int16_t * paraValue, unsigned int eepromAddr, int16_t dfltVal, int16_t minVal, int16_t maxVal );
-static char * ParaOutputType( unsigned int eepromAddr, uint8_t operationType, int16_t * paraValue );
 static char * AlarmSetupPara( uint8_t operationType, int16_t * paraValue, unsigned int eeAddress );
 static void ParameterOperationsSettings( uint8_t operationType, int16_t * paraValue, unsigned int eepromAddr, int16_t dfltValue, int16_t maxValue, int16_t minValue );
 static void ParameterOperationsSettingsRollover( uint8_t operationType, int16_t * paraValue, unsigned int eepromAddr, int16_t dfltVal, int16_t minVal, int16_t maxVal );
 //static void ParameterOperationsSettingsRolloverNoDefault( uint8_t operationType, int16_t * paraValue, unsigned int eepromAddr, int16_t minVal, int16_t maxVal );
-static char * SetOutPolarityPara( uint8_t operationType, int16_t * paraValue, unsigned int eepromAddr, int16_t dfltVal );
 
-static char * Output1MappingPara( uint8_t operationType, int16_t * paraValue );
-static char * Output2MappingPara( uint8_t operationType, int16_t * paraValue );
-static char * Output3MappingPara( uint8_t operationType, int16_t * paraValue );
-static char * Output4MappingPara( uint8_t operationType, int16_t * paraValue );
-static char * OutputMappingPara( uint8_t operationType, int16_t * paraValue, int16_t dfltVal, unsigned int eeAddress );
-static char * OutputMappingPara1( uint8_t operationType, int16_t * paraValue, int16_t dfltVal, unsigned int eeAddress );
-
-//static void FormatAbsPressure( uint8_t unit, int16_t value);
-//static void FormatDiffPressure( uint8_t unit, int16_t value);
-//static void FormatDiff3Pressure( uint8_t unit, int16_t value);
 static void FormatDP(uint8_t unit, int16_t value, int16_t range1, uint8_t AreaType, int16_t length, int16_t width, int16_t radious);
 static void FormatTemperature( int16_t value, uint8_t decimal);
 static void FormatHumidity( int16_t value, uint8_t decimal);
 static void FormatFloat(int16_t value);
-//static void FormatPartical( uint16_t value);
-
 
 //static void FormatControlOutput( char * str, int value);
 static void FormatError( int8_t error );
@@ -794,28 +665,11 @@ static uint8_t IsMasterReset();
 static uint8_t IsConfigPassword();
 static uint8_t NotConfigPassword();
 
-static uint8_t IsPresAbsOutEnabled();
-static uint8_t IsPresAbsPIDEnabled();
-static uint8_t IsPresDiffOutEnabled();
-static uint8_t IsPresDiffPIDEnabled();
-static uint8_t IsTempOutEnabled();
-static uint8_t IsTempPIDEnabled();
-static uint8_t IsRHOutEnabled();
-static uint8_t IsRHPIDEnabled();
-static uint8_t IsPresAbsOutActive();
-static uint8_t IsPresDiffOutActive();
-static uint8_t IsTempOutActive();
-static uint8_t IsRHOutActive();
 static uint8_t IsTempOrRHEnabled();
 static uint8_t IsPresAbsAlarmEnabled();
-static uint8_t IsPresDiffAlarmEnabled();
-static uint8_t IsPresDiff3AlarmEnabled();
 static uint8_t IsTempAlarmEnabled();
 static uint8_t IsHumidityAlarmEnabled();
 static uint8_t IsRTCEnabled();
-//static uint8_t IsParticalAlarmEnabled();
-static uint8_t IsTempRHPIDEnabled();
-//static uint8_t IsPresEnabled();
 
 static void SetAllParametersToDefault();
 
@@ -830,13 +684,6 @@ static unsigned char LCDControl = BLOCKED;
 
 unsigned char systemXLoc;
 unsigned char systemYLoc;
-
-unsigned char presAbsYLoc_disp_mode_all_para;
-unsigned char presDiffYLoc_disp_mode_all_para;
-unsigned char presDiff3YLoc_disp_mode_all_para;
-unsigned char tempYLoc_disp_mode_all_para;
-unsigned char humidityYLoc_disp_mode_all_para;
-unsigned char ParticalYLoc_disp_mode_all_para;
 
 static uint8_t isMasterReset;
 
@@ -861,7 +708,7 @@ int16_t eeprom_value = 0;
 uint8_t eeprom_write_timeout = 0;
    
 //static uint8_t timer, curDisplay;
-static SENSOR_VALUE senVal, senVal2,senVal3;
+static SENSOR_VALUE senVal, senVal3;
 //static ALARMS alarmOut;
 //static sen5x_measured_value_t sen55;
 //static uint8_t dispList[6], noOfSensors;
@@ -925,19 +772,7 @@ void UserInterfaceTask( void )
 					GetPareValue(DP1_VAL_INDEX, &senVal3);
 					OSWriteEEPromWord((unsigned int *)EA_DP1_ZERO_ADJ, senVal3.rawValue);
 				}
-				
-				if(IsDP2Enabled())
-				{
-					GetPareValue(DP2_VAL_INDEX, &senVal3);
-					OSWriteEEPromWord((unsigned int *)EA_DP2_ZERO_ADJ, senVal3.rawValue);
-				}
-				
-				if(IsDP3Enabled())
-				{
-					GetPareValue(DP3_VAL_INDEX, &senVal3);
-					OSWriteEEPromWord((unsigned int *)EA_DP3_ZERO_ADJ, senVal3.rawValue);
-				}
-				
+
 				DPautocal = 1;
 			}
 				
@@ -1043,176 +878,18 @@ void UserInterfaceInit()
 	StartDisplaySensorValues();
 }
 
-static void ShowFixText(void)
-{
-	ks0xxx_SelectFont(ARIAL18BOLD, ks0xxx_ReadFontData, BLACK);
-	PrintLineInBox(LEFT,5,120,120,"ID:  ");
-	PrintLineInBox(LEFT,5,120,140,"ROOM:  ");
-	//-------------------------------------------------------------------------
-	//ks0xxx_SelectFont(Font6x8, ks0xxx_ReadFontData, BLACK);
-	//PrintLineInBox(LEFT,4,80,8,"AHU:");
-	//PrintLineInBox(LEFT,84,160,8,"CFM:");
-	//PrintLineInBox(LEFT,164,GLCD_PIXEL_X-1,8,"ID:");
-	//
-	//if(!IsTemperature2Enabled())
-	//{
-		//PrintLineInBox(LEFT,4,80,144,"Area1:");
-		//PrintLineInBox(LEFT,84,160,144,"Area2:");
-		//PrintLineInBox(LEFT,164,GLCD_PIXEL_X-1,144,"Area3:");
-	//}
-	//
-	////INPUT
-	//PrintLineInBox(LEFT,165,GLCD_PIXEL_X-1,40,"1-");
-	//PrintLineInBox(LEFT,165,GLCD_PIXEL_X-1,48,"2-");
-	//PrintLineInBox(LEFT,165,GLCD_PIXEL_X-1,56,"3-");
-	//PrintLineInBox(LEFT,165,GLCD_PIXEL_X-1,64,"4-");
-	////PrintLineInBox(LEFT,165,GLCD_PIXEL_X-1,72,"DOOR:");
-	////OUTPUT
-	//PrintLineInBox(LEFT,165,GLCD_PIXEL_X-1,104,"1-");
-	//PrintLineInBox(LEFT,165,GLCD_PIXEL_X-1,112,"2-");
-	//PrintLineInBox(LEFT,165,GLCD_PIXEL_X-1,120,"3-");
-	//PrintLineInBox(LEFT,165,GLCD_PIXEL_X-1,128,"4-");
-	//
-	//ks0xxx_SelectFont(Font6x8, ks0xxx_ReadFontData, WHITE);
-	//PrintLineInBoxWOClear(CENTER,160,GLCD_PIXEL_X-1,24,"INPUT");
-	//PrintLineInBoxWOClear(CENTER,160,GLCD_PIXEL_X-1,88,"OUTPUT");
-}
-
-//static void DrawVarText(void)
-//{
-	//ks0xxx_SelectFont(ARIAL18BOLD, ks0xxx_ReadFontData, BLACK);
-	//
-	//PrintLineInBox(LEFT,4,80,40,"-999.9");
-	//PrintLineInBox(LEFT,4,80,80,"-999.9");
-	//PrintLineInBox(LEFT,4,80,120,"-999.9");
-	//
-	//PrintLineInBox(LEFT,84,160,40,"-999.9");
-	//PrintLineInBox(LEFT,84,160,80,"-999.9");
-	//PrintLineInBox(LEFT,84,160,120,"24:59:59");
-//}
-
-static void ShowSetValue(void)
-{
-	memset(displayStr,0,sizeof(displayStr));
-	//---------------------------------------------------------------------
-	ks0xxx_SelectFont(Font6x8, ks0xxx_ReadFontData, BLACK);
-	PrintLineInBox(LEFT,32,80,8,FormatInteger (GetParameterValue( AHU_ID )));
-	PrintLineInBox(LEFT,112,160,8,FormatInteger (GetParameterValue( AHU_CFM )));
-	PrintLineInBox(LEFT,184,GLCD_PIXEL_X-1,8,FormatInteger (GetParameterValue( DEVICE_ID )));
-	
-	if(!IsTemperature2Enabled())
-	{
-		PrintLineInBox(LEFT,45,80,144,FormatInteger (GetParameterValue( AHU_AREA1 )));
-		PrintLineInBox(LEFT,125,160,144,FormatInteger (GetParameterValue( AHU_AREA2 )));
-		PrintLineInBox(LEFT,205,GLCD_PIXEL_X-1,144,FormatInteger (GetParameterValue( AHU_AREA3 )));
-	}
-}
-
-static void ShowIOValue(void)
-{ 
-	uint8_t inputs,outputs; 
-	
-	GetInput(&inputs);
-	GetOutput(&outputs);
-	
-	if(!(inputs & PIN0_bm))
-	{
-		PrintLineInBox(LEFT,180,GLCD_PIXEL_X-1,40,&gu8_inOutput[0][0]);
-	}
-	else 
-	{
-		PrintLineInBox(LEFT,180,GLCD_PIXEL_X-1,40,&gu8_inOutput[1][0]);
-	}
-	
-	if(!(inputs & PIN1_bm))
-	{
-		PrintLineInBox(LEFT,180,GLCD_PIXEL_X-1,48,&gu8_inOutput[2][0]);
-	}
-	else
-	{
-		PrintLineInBox(LEFT,180,GLCD_PIXEL_X-1,48,&gu8_inOutput[3][0]);
-	}
-	
-	if(!(inputs & PIN2_bm))
-	{
-		PrintLineInBox(LEFT,180,GLCD_PIXEL_X-1,56,&gu8_inOutput[4][0]);
-	}
-	else
-	{
-		PrintLineInBox(LEFT,180,GLCD_PIXEL_X-1,56,&gu8_inOutput[5][0]);
-	}
-	
-	if(!(inputs & PIN3_bm))
-	{
-		PrintLineInBox(LEFT,180,GLCD_PIXEL_X-1,64,&gu8_inOutput[6][0]);
-	}
-	else
-	{
-		PrintLineInBox(LEFT,180,GLCD_PIXEL_X-1,64,&gu8_inOutput[7][0]);
-	}
-	
-	if(!(outputs & PIN0_bm))
-	{
-		PrintLineInBox(LEFT,180,GLCD_PIXEL_X-1,104,&gu8_inOutput[8][0]);
-	}
-	else
-	{
-		PrintLineInBox(LEFT,180,GLCD_PIXEL_X-1,104,&gu8_inOutput[9][0]);
-	}
-	
-	if(!(outputs & PIN1_bm))
-	{
-		PrintLineInBox(LEFT,180,GLCD_PIXEL_X-1,112,&gu8_inOutput[10][0]);
-	}
-	else
-	{
-		PrintLineInBox(LEFT,180,GLCD_PIXEL_X-1,112,&gu8_inOutput[11][0]);
-	}
-	
-	if(!(outputs & PIN2_bm))
-	{
-		PrintLineInBox(LEFT,180,GLCD_PIXEL_X-1,120,&gu8_inOutput[12][0]);
-	}
-	else
-	{
-		PrintLineInBox(LEFT,180,GLCD_PIXEL_X-1,120,&gu8_inOutput[13][0]);
-	}
-	
-	if(!(outputs & PIN3_bm))
-	{
-		PrintLineInBox(LEFT,180,GLCD_PIXEL_X-1,128,&gu8_inOutput[14][0]);
-	}
-	else
-	{
-		PrintLineInBox(LEFT,180,GLCD_PIXEL_X-1,128,&gu8_inOutput[15][0]);
-	}
-}
-
-static void DrawTable(void)
-{	
-	ks0xxx_FillRect(0,0,70,18,BLACK);
-	ks0xxx_FillRect(140,0,GLCD_PIXEL_X-140-1,18,BLACK);
-	ks0xxx_FillRect(0,120,70,18,BLACK);
-	ks0xxx_FillRect(140,80,GLCD_PIXEL_X-140-1,18,BLACK);
-}
-
 void StartDisplaySensorValues(void)
 {
-	//OSSemaTakeEver(UIMutex);
 	uc1638_FillScreen(BLANK1);
-	//DrawTable();
-	//ShowFixText();
-	//OSSemaGive(UIMutex);
-
+	
 	LCDControl = SENSOR_VALUES;
 }
 
 void DisplaySensorValues(void)
 {
-	static char noSystemErrDisp = 0;
 	uint8_t errorCode;
-	int value1=0,PreTempvalue=0,PostTempvalue=0;
-	int PreRHvalue=0,PostRHvalue=0;
+	int value1=0;
+	//int PreRHvalue=0,PreTempvalue=0;
 
 	if (IsLCDDisplay())
 	{
@@ -1312,43 +989,50 @@ void DisplaySensorValues(void)
 		
 		sprintf(displayStr1,"%s  ",(CurrentDoorStatus()==OPEN)?"OPEN":"CLOSE");
 		PrintLineInBox(LEFT,90,140,144,displayStr1);
-		
 		//---------------------------------------------------------------------
 		GetPareValue(DP1_VAL_INDEX, &senVal);
 		if( abs(senVal.convertedValue) < GetParameterValue( DP1_ZERO_RNG ))
-			senVal.convertedValue = 0;		
+		senVal.convertedValue = 0;
 		
 		if( abs(senVal.convertedValue) < 5000)
-			senVal.convertedValue += GetParameterValue( DP_RANGE1_ADJ );
-		else if( abs(senVal.convertedValue) < 10000)	
-			senVal.convertedValue += GetParameterValue( DP_RANGE2_ADJ );
+		senVal.convertedValue += GetParameterValue( DP_RANGE1_ADJ );
+		else if( abs(senVal.convertedValue) < 10000)
+		senVal.convertedValue += GetParameterValue( DP_RANGE2_ADJ );
 		else if( abs(senVal.convertedValue) < 15000)
-			senVal.convertedValue += GetParameterValue( DP_RANGE3_ADJ );
+		senVal.convertedValue += GetParameterValue( DP_RANGE3_ADJ );
 		else if( abs(senVal.convertedValue) < 20000)
-			senVal.convertedValue += GetParameterValue( DP_RANGE4_ADJ );
+		senVal.convertedValue += GetParameterValue( DP_RANGE4_ADJ );
 		else if( abs(senVal.convertedValue) < 25000)
-			senVal.convertedValue += GetParameterValue( DP_RANGE5_ADJ );
+		senVal.convertedValue += GetParameterValue( DP_RANGE5_ADJ );
 		else if( abs(senVal.convertedValue) < 30000)
-			senVal.convertedValue += GetParameterValue( DP_RANGE6_ADJ );
+		senVal.convertedValue += GetParameterValue( DP_RANGE6_ADJ );
 		
-		
-		noSystemErrDisp = DisplayDP1(senVal.errorCode, senVal.convertedValue);
+		DisplayDP1(senVal.errorCode, senVal.convertedValue);
 		//---------------------------------------------------------------------
-		GetPareValue(HUMIDITY_VAL_INDEX, &senVal);
-		PreRHvalue = senVal.convertedValue;
+		if(IsTempOrRHEnabled())
+		{
+			
+			//---------------------------------------------------------------------
+			GetPareValue(HUMIDITY_VAL_INDEX, &senVal);
+			//if(senVal.errorCode == ERROR_OK) PreRHvalue = senVal.convertedValue;
 		
-		value1 = senVal.convertedValue;
-		errorCode = senVal.errorCode;
+			value1 = senVal.convertedValue;
+			errorCode = senVal.errorCode;
 		
-		noSystemErrDisp = DisplayHumidity(errorCode, value1);
-		//---------------------------------------------------------------------
-		GetPareValue(TEMPERATURE_VAL_INDEX, &senVal);
-		if(senVal.errorCode == ERROR_OK) PreTempvalue = senVal.convertedValue;
+			DisplayHumidity(errorCode, value1);
+			//---------------------------------------------------------------------
+			GetPareValue(TEMPERATURE_VAL_INDEX, &senVal);
+			//if(senVal.errorCode == ERROR_OK) PreTempvalue = senVal.convertedValue;
 		
-		value1 = senVal.convertedValue;
-		errorCode = senVal.errorCode;
+			value1 = senVal.convertedValue;
+			errorCode = senVal.errorCode;
 
-		noSystemErrDisp = DisplayTemperature(errorCode, value1);
+			DisplayTemperature(errorCode, value1);
+		}
+		else
+		{
+			
+		}
 		//---------------------------------------------------------------------
 		if(IsRTCEnabled())
 		{
@@ -1610,6 +1294,11 @@ void DisplayRTC(void)
 char DisplayDP1(uint8_t error, int16_t value)
 {
 	char noSystemErrDisp = 0;
+	uint16_t lu16_offset=0;
+	
+	if(IsTempOrRHEnabled()) lu16_offset=0;
+	else lu16_offset=60;
+	
 	if (IsLCDDisplay())
 	{
 		//OSSemaTakeEver(UIMutex);
@@ -1626,12 +1315,12 @@ char DisplayDP1(uint8_t error, int16_t value)
 		locked_sprintf_P( displayStr, PSTR("DP  (%S)"), formatedUnit);
 
 		ks0xxx_SelectFont(ARIAL18BOLD, ks0xxx_ReadFontData, BLACK);
-		PrintLineInBox(LEFT,25,70,0,displayStr);
+		PrintLineInBox(LEFT,25+lu16_offset,70,0,displayStr);
 		
 		locked_sprintf_P( displayStr, PSTR("%s"), formatedValue );
 		
 		ks0xxx_SelectFont( Bodoni89, ks0xxx_ReadFontData, BLACK);
-		PrintLineInBox(LEFT,25,150,16,displayStr);
+		PrintLineInBox(LEFT,25+lu16_offset,150,16,displayStr);
 		
 		ks0xxx_SelectFont( Bodoni15, ks0xxx_ReadFontData, BLACK);
 		
@@ -1652,66 +1341,10 @@ char DisplayDP1(uint8_t error, int16_t value)
 		
 		sprintf(&displayStr1[length],"H%s",formatedValue);
 		
-		PrintLineInBox(LEFT,25,135,90,displayStr1);
 		
-		//OSSemaGive(UIMutex);
-	}
-	return noSystemErrDisp;
-}
-
-char DisplayDP2(uint8_t error, int16_t value)
-{
-	char noSystemErrDisp = 0;
-	if (IsLCDDisplay())
-	{
-		//OSSemaTakeEver(UIMutex);
-
-		FormatDP(GetParameterValue( DP2_UNIT ), value, GetParameterValue(DP2_RANGE), GetParameterValue(DP2_AREA_TYPE), GetParameterValue(DP2_AREA_LENGTH), GetParameterValue(DP2_AREA_WIDTH), GetParameterValue(DP2_AREA_RADIOUS));
-		formatedValue[strlen(formatedValue)-1] = '\0';  // one digit less resolution then setup
-		if(formatedValue[strlen(formatedValue)-1] == '.' )
-		formatedValue[strlen(formatedValue)-1] = '\0';  // if last digit '.' remove it
-		if( error != ERROR_OK )
-		{
-			FormatError( error );
-		}
 		
-		locked_sprintf_P( displayStr, PSTR("D2(%S)"), formatedUnit);
-		ks0xxx_SelectFont(Font6x8, ks0xxx_ReadFontData, WHITE);
-		PrintLineInBox(LEFT,2,80,64,displayStr);
-
-		locked_sprintf_P( displayStr, PSTR("%s"), formatedValue );
-		ks0xxx_SelectFont(ARIAL18BOLD, ks0xxx_ReadFontData, BLACK);
-		PrintLineInBox(LEFT,2,80,80,displayStr);
-
-		//OSSemaGive(UIMutex);
-	}
-	return noSystemErrDisp;
-}
-
-char DisplayDP3(uint8_t error, int16_t value)
-{
-	char noSystemErrDisp = 0;
-	if (IsLCDDisplay())
-	{
-		//OSSemaTakeEver(UIMutex);
-	  
-		FormatDP(GetParameterValue( DP3_UNIT ), value, GetParameterValue(DP3_RANGE), GetParameterValue(DP3_AREA_TYPE), GetParameterValue(DP3_AREA_LENGTH), GetParameterValue(DP3_AREA_WIDTH), GetParameterValue(DP3_AREA_RADIOUS));
-		formatedValue[strlen(formatedValue)-1] = '\0';  // one digit less resolution then setup
-		if(formatedValue[strlen(formatedValue)-1] == '.' )
-		formatedValue[strlen(formatedValue)-1] = '\0';  // if last digit '.' remove it
-		if( error != ERROR_OK )
-		{
-			FormatError( error );
-		}
+		PrintLineInBox(LEFT,25+lu16_offset,135,90,displayStr1);
 		
-		locked_sprintf_P( displayStr, PSTR("D3(%S)"), formatedUnit);
-		ks0xxx_SelectFont(Font6x8, ks0xxx_ReadFontData, WHITE);
-		PrintLineInBox(LEFT,2,80,104,displayStr);
-		
-		locked_sprintf_P( displayStr, PSTR("%s"), formatedValue );
-		ks0xxx_SelectFont(ARIAL18BOLD, ks0xxx_ReadFontData, BLACK);
-		PrintLineInBox(LEFT,2,80,120,displayStr);
-
 		//OSSemaGive(UIMutex);
 	}
 	return noSystemErrDisp;
@@ -1720,7 +1353,6 @@ char DisplayDP3(uint8_t error, int16_t value)
 char DisplayTemperature(uint8_t error, int16_t value)
 {
 	char noSystemErrDisp = 0;
-	//uint8_t Temp = IsTemperature2Enabled();
 	
 	if (IsLCDDisplay())
 	{
@@ -1759,32 +1391,9 @@ char DisplayTemperature(uint8_t error, int16_t value)
 	return noSystemErrDisp;
 }
 
-char DisplayTemperature2(uint8_t error, int16_t value)
-{
-	char noSystemErrDisp = 0;
-	if (IsLCDDisplay())
-	{
-		//OSSemaTakeEver(UIMutex);
-
-		FormatTemperature( value, 1 );
-		if( error != ERROR_OK )
-		{
-			FormatError( error );
-		}
-		
-		locked_sprintf_P( displayStr, PSTR("PTEMP(%S)=%s"), formatedUnit,formatedValue);
-		ks0xxx_SelectFont(ARIAL18BOLD, ks0xxx_ReadFontData, BLACK);
-		PrintLineInBox(LEFT,4,GLCD_PIXEL_X-1,144,displayStr);
-		
-		//OSSemaGive(UIMutex);
-	}
-	return noSystemErrDisp;
-}
-
 char DisplayHumidity(uint8_t error, int16_t value)
 {
 	char noSystemErrDisp = 0;
-	//uint8_t Temp = IsTemperature2Enabled();
 	
 	if (IsLCDDisplay())
 	{
@@ -1827,7 +1436,7 @@ char DisplayHumidity(uint8_t error, int16_t value)
 /* Converts and formats the sting for output */
 static void FormatDP(uint8_t unit, int16_t value, int16_t range1, uint8_t AreaType, int16_t length, int16_t width, int16_t radious)
 {
-	double result,range,area=1;
+	double result,area=1;
 	uint8_t decimal;  // minimum value is 1
 	
 	//range = range1;
@@ -1984,25 +1593,6 @@ static void FormatFloat(int16_t value)
 
 	return;
 }
-
-//static void FormatPartical( uint16_t value)
-//{
-	//double result;
-//
-	//if (IsLCDDisplay())
-	//{
-		////formatedUnit = PSTR("um");
-		//result = value / 10.0;
-		//dtostrf( result, sizeof(formatedValue)-1, 1, formatedValue);
-		//strcpy( formatedValue, strtrim(formatedValue));
-	//}
-	//return;
-//}
-
-//static void FormatControlOutput( char * str, int value)
-//{
-   //locked_sprintf_P( str, PSTR("Output:%d.%d%%"), (int)(value/10), (int)(value%10));
-//}
 
 //-------------------------------
 // Convert BCD 1 byte to HEX 1 byte
@@ -2171,36 +1761,6 @@ char * FormatDP1OneLine( char * str, uint8_t error, int16_t value )
    return str;
 }
 
-char * FormatDP2OneLine( char * str, uint8_t error, int16_t value )
-{
-	if( error != ERROR_OK )
-	{
-		FormatError( error );
-	}
-	else
-	{
-		FormatDP(GetParameterValue( DP2_UNIT ), value, GetParameterValue(DP2_RANGE), GetParameterValue(DP2_AREA_TYPE), GetParameterValue(DP2_AREA_LENGTH), GetParameterValue(DP2_AREA_WIDTH), GetParameterValue(DP2_AREA_RADIOUS));
-	}
-
-	locked_sprintf_P( str, PSTR("DP2(%S): %s"), formatedUnit, formatedValue );
-	return str;
-}
-
-char * FormatDP3OneLine( char * str, uint8_t error, int16_t value )
-{
-	if( error != ERROR_OK )
-	{
-		FormatError( error );
-	}
-	else
-	{
-		FormatDP(GetParameterValue( DP3_UNIT ), value, GetParameterValue(DP3_RANGE), GetParameterValue(DP3_AREA_TYPE), GetParameterValue(DP3_AREA_LENGTH), GetParameterValue(DP3_AREA_WIDTH), GetParameterValue(DP3_AREA_RADIOUS));
-	}
-
-	locked_sprintf_P( str, PSTR("DP3(%S): %s"), formatedUnit, formatedValue );
-	return str;
-}
-
 char * FormatTemperatureOneLine( char * str, uint8_t error, int16_t value, uint8_t decimal)
 {
    FormatTemperature( value, decimal );
@@ -2218,46 +1778,6 @@ char * FormatHumidityOneLine( char * str, uint8_t error, int16_t value, uint8_t 
    locked_sprintf_P( str, PSTR("HUMI(%S): %s"), formatedUnit, formatedValue );
    return str;
 }
-
-
-//char * FormatPartialStuffOneLine( char * str, uint8_t error, uint16_t value )
-//{
-	//if(error != ERROR_OK)
-	//{
-		//FormatError( error );
-	//}
-	//else
-	//{
-		//FormatPartical( value );
-	//}
-	//
-	//locked_sprintf_P( str, PSTR("%s ppb"), formatedValue );
-	//return str;
-//}
-//
-//char * FormatParticalOneLine( char * str, uint8_t error, uint16_t value )
-//{
-	//if(error != ERROR_OK)
-	//{
-		//FormatError( error );
-	//}
-	//else
-	//{
-		//FormatPartical( value );
-	//}
-	//
-	//switch(GetParameterValue( PARTICAL_SIZE_TYPE ))
-	//{
-		//case PARTICAL_SIZE_1_0:		formatedtype=PSTR("1.0");	 break;
-		//case PARTICAL_SIZE_2_5:		formatedtype=PSTR("2.5");	 break;
-		//case PARTICAL_SIZE_4_0:		formatedtype=PSTR("4.0");	 break;
-		//case PARTICAL_SIZE_10_0:	formatedtype=PSTR("10.0");	 break;
-	//}
-	//
-	//locked_sprintf_P( str, PSTR("PC%S(%S): %s"), formatedtype, PSTR("ug/m3"), formatedValue );
-	//
-	//return str;
-//}
 
 const PARA_INFO paraTableLCD [] PROGMEM =
 {
@@ -2280,59 +1800,7 @@ const PARA_INFO paraTableLCD [] PROGMEM =
 	{ DP1_UPPER_ALARM_OFF_LIMIT,   IsPresAbsAlarmEnabled,  IsDP1Enabled, "DP1 Upr Alarm Off",    PresAbsUpperAlarmOffPara  },
 	{ DP1_LOWER_ALARM_ON_LIMIT,    IsPresAbsAlarmEnabled,  IsDP1Enabled, "DP1 Lwr Alarm On",     PresAbsLowerAlarmOnPara },
 	{ DP1_LOWER_ALARM_OFF_LIMIT,   IsPresAbsAlarmEnabled,  IsDP1Enabled, "DP1 Lwr Alarm Off",    PresAbsLowerAlarmOffPara  },
-	{ DP1_OUTPUT_TYPE,             IsAlalogOutEnabled,  IsPIDEnabled,          "DP1 Out Type",       PresAbsOutputTypePara  },
-	{ DP1_OUT_LOW_PRES,            IsPresAbsOutEnabled, IsAlalogOutEnabled,    "DP1 MinOutput",     PresAbsValForMinimumOutputPara  },
-	{ DP1_OUT_HIGH_PRES,           IsPresAbsOutEnabled, IsAlalogOutEnabled,    "DP1 MaxOutput",     PresAbsValForMaximumOutputPara  },
-	{ DP1_PID_STARTUP_PERCENT,     IsPresAbsPIDEnabled, IsAlalogOutEnabled,    "DP1 PID Start %",    PresAbsPIDStartupPercentPara  },
-	{ DP1_PID_KP,                  IsPresAbsPIDEnabled, IsAlalogOutEnabled,    "DP1 PID Kp",         PresAbsPIDKpPara  },
-	{ DP1_PID_TI,                  IsPresAbsPIDEnabled, IsAlalogOutEnabled,    "DP1 PID Ti",         PresAbsPIDTiPara  },
-	{ DP1_PID_TD,                  IsPresAbsPIDEnabled, IsAlalogOutEnabled,    "DP1 PID Td",         PresAbsPIDTdPara  },
-	{ DP1_PID_SET_VALUE,           IsPresAbsPIDEnabled, IsAlalogOutEnabled,    "DP1 PIDSetPoint",   PresAbsPIDSetpointPara  },
-	{ DP1_OUT_POLARITY,            IsPresAbsOutActive,  IsAlalogOutEnabled,    "DP1 OutPolarity",   PresAbsOutPolarityPara  },
-	{ DP1_OUT_LOW_COUNT,           IsPresAbsOutActive,  IsAlalogOutEnabled,    "DP1 OutCntMin",    OutputCountsForPresAbsMinimumPara  },
-	{ DP1_OUT_HIGH_COUNT,          IsPresAbsOutActive,  IsAlalogOutEnabled,    "DP1 OutCntMax",    OutputCountsForPresAbsMaximumPara  },
 	
-	{ DP2_UNIT,						IsDP2Enabled,      NULL,           "DP2 Unit",           PressureDiffUnitPara  },
-	{ DP2_AREA_TYPE,               IsMasterReset, IsDP2CFMEnabled,				"DP2 AREA TYPE",     DP2AreaTypePara  },
-	{ DP2_AREA_LENGTH,             IsMasterReset, IsDP2CFMAreaSquare,				"DP2 AREA LENGTH",   DP2AreaLengthPara  },
-	{ DP2_AREA_WIDTH,              IsMasterReset, IsDP2CFMAreaSquare,				"DP2 AREA WIDTH",    DP2AreaWidthPara  },
-	{ DP2_AREA_RADIOUS,            IsMasterReset, IsDP2CFMAreaRound,				"DP2 AREA RAD",  DP2AreaRadiousPara  },
-	{ DP2_ZERO_RNG,               IsDP2Enabled,      NULL,					"DP2 ZeroRng",   DiffPresZeroRangePara    },
-	{ DP2_ZERO_ADJ,               IsDP2Enabled,      NULL,					"DP2 ZeroAdj",   DiffPresZeroAdjustPara    },
-	{ DP2_MANP_THRESHOLD,          IsMasterReset,      IsDP2Enabled,      "DP2 Manp Threshold",  DiffPresManpThPara  },
-	{ DP2_MANP_MAX_LIMIT,          IsMasterReset,      IsDP2Enabled,      "DP2 Manp Limit",  DiffPresManpLmtPara  },
-	{ DP2_ALARM_SETUP,            IsAlarmEnabled,         IsDP2Enabled,     "DP2 Alarm Setup",      PresDiffAlarmSetupPara },
-	{ DP2_UPPER_ALARM_ON_LIMIT,   IsPresDiffAlarmEnabled, IsDP2Enabled,     "DP2 Upr Alarm On",     PresDiffUpperAlarmOnPara  },
-	{ DP2_UPPER_ALARM_OFF_LIMIT,  IsPresDiffAlarmEnabled, IsDP2Enabled,     "DP2 Upr Alarm Off",    PresDiffUpperAlarmOffPara },
-	{ DP2_LOWER_ALARM_ON_LIMIT,   IsPresDiffAlarmEnabled, IsDP2Enabled,     "DP2 Lwr Alarm On",     PresDiffLowerAlarmOnPara  },
-	{ DP2_LOWER_ALARM_OFF_LIMIT,  IsPresDiffAlarmEnabled, IsDP2Enabled,     "DP2 Lwr Alarm Off",    PresDiffLowerAlarmOffPara },
-	{ DP2_OUTPUT_TYPE,            IsAlalogOutEnabled,   IsPIDEnabled,         "DP2 Out Type",       PresDiffOutputTypePara  },
-	{ DP2_OUT_LOW_PRES,           IsPresDiffOutEnabled, IsAlalogOutEnabled,   "DP2 MinOutput",     PresDiffValForMinimumOutputPara  },
-	{ DP2_OUT_HIGH_PRES,          IsPresDiffOutEnabled, IsAlalogOutEnabled,   "DP2 MaxOutput",     PresDiffValForMaximumOutputPara  },
-	{ DP2_PID_STARTUP_PERCENT,          IsPresDiffPIDEnabled, IsAlalogOutEnabled,   "DP2 PID Start %",    PresDiffPIDStartupPercentPara  },
-	{ DP2_PID_KP,                 IsPresDiffPIDEnabled, IsAlalogOutEnabled,   "DP2 PID Kp",         PresDiffPIDKpPara  },
-	{ DP2_PID_TI,                 IsPresDiffPIDEnabled, IsAlalogOutEnabled,   "DP2 PID Ti",         PresDiffPIDTiPara  },
-	{ DP2_PID_TD,                 IsPresDiffPIDEnabled, IsAlalogOutEnabled,   "DP2 PID Td",         PresDiffPIDTdPara  },
-	{ DP2_PID_SET_VALUE,          IsPresDiffPIDEnabled, IsAlalogOutEnabled,   "DP2 PIDSetPoint",   PresDiffPIDSetpointPara  },
-	{ DP2_OUT_POLARITY,           IsPresDiffOutActive,  IsAlalogOutEnabled,   "DP2 OutPolarity",   PresDiffOutPolarityPara  },
-	{ DP2_OUT_LOW_COUNT,          IsPresDiffOutActive,  IsAlalogOutEnabled,   "DP2 OutCntMin",    OutputCountsForPresDiffMinimumPara  },
-	{ DP2_OUT_HIGH_COUNT,         IsPresDiffOutActive,  IsAlalogOutEnabled,   "DP2 OutCntMax",    OutputCountsForPresDiffMaximumPara  },
-	
-	{ DP3_UNIT,					  IsDP3Enabled,     NULL,           "DP3 Unit",           PressureDiff3UnitPara  },
-	{ DP3_AREA_TYPE,               IsMasterReset, IsDP3CFMEnabled,				"DP3 AREA TYPE",     DP3AreaTypePara  },
-	{ DP3_AREA_LENGTH,             IsMasterReset, IsDP3CFMAreaSquare,				"DP3 AREA LENGTH",   DP3AreaLengthPara  },
-	{ DP3_AREA_WIDTH,              IsMasterReset, IsDP3CFMAreaSquare,				"DP3 AREA WIDTH",    DP3AreaWidthPara  },
-	{ DP3_AREA_RADIOUS,            IsMasterReset, IsDP3CFMAreaRound,				"DP3 AREA RAD",  DP3AreaRadiousPara  },
-	{ DP3_ZERO_RNG,              IsDP3Enabled,      NULL,          "DP3 ZeroRng",   DiffPres3ZeroRangePara    },
-	{ DP3_ZERO_ADJ,              IsDP3Enabled,      NULL,          "DP3 ZeroAdj",   DiffPres3ZeroAdjustPara    },
-	{ DP3_MANP_THRESHOLD,          IsMasterReset,      IsDP3Enabled,      "DP3 Manp Threshold",  DiffPres3ManpThPara  },
-	{ DP3_MANP_MAX_LIMIT,          IsMasterReset,      IsDP3Enabled,      "DP3 Manp Limit",  DiffPres3ManpLmtPara  },
-	{ DP3_ALARM_SETUP,            IsAlarmEnabled,          IsDP3Enabled,     "DP3 Alarm Setup",      PresDiff3AlarmSetupPara },
-	{ DP3_UPPER_ALARM_ON_LIMIT,   IsPresDiff3AlarmEnabled, IsDP3Enabled,     "DP3 Upr Alarm On",     PresDiff3UpperAlarmOnPara  },
-	{ DP3_UPPER_ALARM_OFF_LIMIT,  IsPresDiff3AlarmEnabled, IsDP3Enabled,     "DP3 Upr Alarm Off",    PresDiff3UpperAlarmOffPara },
-	{ DP3_LOWER_ALARM_ON_LIMIT,   IsPresDiff3AlarmEnabled, IsDP3Enabled,     "DP3 Lwr Alarm On",     PresDiff3LowerAlarmOnPara  },
-	{ DP3_LOWER_ALARM_OFF_LIMIT,  IsPresDiff3AlarmEnabled, IsDP3Enabled,     "DP3 Lwr Alarm Off",    PresDiff3LowerAlarmOffPara },	   	   
-		
 	{ TEMPERATURE_UNIT,                 IsTemperatureEnabled,       NULL,           "Temperature Unit",   TemperatureUnitPara  },
 	{ TEMP_ZERO_ADJ,                    IsTemperatureEnabled,       NULL,           "TempZeroAdjCnt",  TempZeroAdjustPara  },
 	{ TEMP_ALARM_SETUP,                 IsAlarmEnabled,         IsTemperatureEnabled,      "Temp Alarm Setup",      TempAlarmSetupPara },
@@ -2340,25 +1808,7 @@ const PARA_INFO paraTableLCD [] PROGMEM =
 	{ TEMP_UPPER_ALARM_OFF_LIMIT,       IsTempAlarmEnabled,     IsTemperatureEnabled,      "Temp Upr Alarm Off",    TempUpperAlarmOffPara  },
 	{ TEMP_LOWER_ALARM_ON_LIMIT,        IsTempAlarmEnabled,     IsTemperatureEnabled,      "Temp Lwr Alarm On",     TempLowerAlarmOnPara  },
 	{ TEMP_LOWER_ALARM_OFF_LIMIT,       IsTempAlarmEnabled,     IsTemperatureEnabled,      "Temp Lwr Alarm Off",    TempLowerAlarmOffPara  },
-	{ TEMP_DIFF_ALARM_LIMIT,			IsTempAlarmEnabled,     IsTemperature2Enabled,     "Temp diff Alarm",    TempDiffAlarmPara  },
-	{ TEMP_OUTPUT_TYPE,                 IsAlalogOutEnabled,  IsPIDEnabled,          "Temp Out Type",      TempOutputTypePara  },
-	{ TEMP_OUT_LOW_TEMP,                IsTempOutEnabled,    IsAlalogOutEnabled,    "Temp MinOutput",    TempValForMinimumOutputPara  },
-	{ TEMP_OUT_HIGH_TEMP,               IsTempOutEnabled,    IsAlalogOutEnabled,    "Temp MaxOutput",    TempValForMaximumOutputPara  },
-	{ TEMP_PID_STARTUP_PERCENT,         IsTempPIDEnabled,    IsAlalogOutEnabled,    "Temp PID Start %",   TempPIDStartupPercentPara  },
-	{ TEMP_PID_KP,                      IsTempPIDEnabled,    IsAlalogOutEnabled,    "Temp PID Kp",        TempPIDKpPara  },
-	{ TEMP_PID_TI,                      IsTempPIDEnabled,    IsAlalogOutEnabled,    "Temp PID Ti",        TempPIDTiPara  },
-	{ TEMP_PID_TD,                      IsTempPIDEnabled,    IsAlalogOutEnabled,    "Temp PID Td",        TempPIDTdPara  },
-	{ TEMP_PID_SET_VALUE,               IsTempPIDEnabled,    IsAlalogOutEnabled,    "Temp PIDSetPoint",  TempPIDSetpointPara  },
-	{ TEMP_HIGH_PID_RH_ADJUST,          IsTempRHPIDEnabled,  IsAlalogOutEnabled,    "PIDHiTempRHAdj",     TempHighPIDRHAdjustPara  },
-	{ TEMP_HIGH_PID_RH_CASCADE_FACTOR,  IsTempRHPIDEnabled,  IsAlalogOutEnabled,    "PIDHiTempCasRHFct", TempHighPIDRHCascadeFactorPara  },
-	{ TEMP_HIGH_PID_CASCADE_RH_STATE,   IsTempRHPIDEnabled,  IsAlalogOutEnabled,    "PIDHiTempCasOnRH",   TempHighPIDRHCascadeStatePara  },
-	{ TEMP_LOW_PID_RH_ADJUST,           IsTempRHPIDEnabled,  IsAlalogOutEnabled,    "PIDLoTempRHAdj",     TempLowPIDRHAdjustPara  },
-	{ TEMP_LOW_PID_RH_CASCADE_FACTOR,   IsTempRHPIDEnabled,  IsAlalogOutEnabled,    "PIDLoTempCasRHFct", TempLowPIDRHCascadeFactorPara  },
-	{ TEMP_LOW_PID_CASCADE_RH_STATE,    IsTempRHPIDEnabled,  IsAlalogOutEnabled,    "PIDLoTempCasOnRH",   TempLowPIDRHCascadeStatePara  },
-	{ TEMP_OUT_POLARITY,                IsTempOutActive,     IsAlalogOutEnabled,    "Temp OutPolarity",  TempOutPolarityPara  },
-	{ TEMP_OUT_LOW_COUNT,               IsTempOutActive,     IsAlalogOutEnabled,    "Temp OutCntMin",   OutputCountsForTempMinimumPara  },
-	{ TEMP_OUT_HIGH_COUNT,              IsTempOutActive,     IsAlalogOutEnabled,    "Temp OutCntTMax",   OutputCountsForTempMaximumPara  },
-
+	
 	{ HUMIDITY_UNIT,                    IsHumidityEnabled,          NULL,           "Humidity Unit",      HumidityUnitPara  },
 	{ RH_ZERO_ADJ,                      IsHumidityEnabled,          NULL,           "RH ZeroAdjCnt",    HumidityZeroAdjustPara    },
 	{ RH_ALARM_SETUP,                   IsAlarmEnabled,         IsHumidityEnabled,         "RH Alarm Setup",      HumidityAlarmSetupPara },
@@ -2366,24 +1816,7 @@ const PARA_INFO paraTableLCD [] PROGMEM =
 	{ RH_UPPER_ALARM_OFF_LIMIT,         IsHumidityAlarmEnabled, IsHumidityEnabled,         "RH Upr Alarm Off",    HumidityUpperAlarmOffPara  },
 	{ RH_LOWER_ALARM_ON_LIMIT,          IsHumidityAlarmEnabled, IsHumidityEnabled,         "RH Lwr Alarm On",     HumidityLowerAlarmOnPara  },
 	{ RH_LOWER_ALARM_OFF_LIMIT,         IsHumidityAlarmEnabled, IsHumidityEnabled,         "RH Lwr Alarm Off",    HumidityLowerAlarmOffPara  },
-	{ RH_OUTPUT_TYPE,                   IsAlalogOutEnabled,  IsPIDEnabled,          "RH Out Type",        HumidityOutputTypePara  },
-	{ RH_OUT_LOW_RH,                    IsRHOutEnabled,      IsAlalogOutEnabled,    "RH MinOutput",      HumidityValForMinimumOutputPara  },
-	{ RH_OUT_HIGH_RH,                   IsRHOutEnabled,      IsAlalogOutEnabled,    "RH MaxOutput",      HumidityValForMaximumOutputPara  },
-	{ RH_PID_STARTUP_PERCENT,           IsRHPIDEnabled,      IsAlalogOutEnabled,    "RH PID Start %",     HumidityPIDStartupPercentPara  },
-	{ RH_PID_KP,                        IsRHPIDEnabled,      IsAlalogOutEnabled,    "RH PID Kp",    HumidityPIDKpPara  },
-	{ RH_PID_TI,                        IsRHPIDEnabled,      IsAlalogOutEnabled,    "RH PID Ti",    HumidityPIDTiPara  },
-	{ RH_PID_TD,                        IsRHPIDEnabled,      IsAlalogOutEnabled,    "RH PID Td",    HumidityPIDTdPara  },
-	{ RH_PID_SET_VALUE,                 IsRHPIDEnabled,      IsAlalogOutEnabled,    "RH PID SetPoint",    HumidityPIDSetpointPara  },
-	{ RH_HIGH_PID_TEMP_ADJUST,          IsTempRHPIDEnabled,  IsAlalogOutEnabled,    "PIDHiRHTempAdj",     HumidityHighPIDTempAdjustPara  },
-	{ RH_HIGH_PID_TEMP_CASCADE_FACTOR,  IsTempRHPIDEnabled,  IsAlalogOutEnabled,    "PIDHiRHCasTempFct", HumidityHighPIDTempCascadeFactorPara },
-	{ RH_HIGH_PID_CASCADE_TEMP_STATE,   IsTempRHPIDEnabled,  IsAlalogOutEnabled,    "PIDHiRHCas OnTemp",  HumidityHighPIDTempCascadeStatePara  },
-	{ RH_LOW_PID_TEMP_ADJUST,           IsTempRHPIDEnabled,  IsAlalogOutEnabled,    "PIDLoRHTempAdj",     HumidityLowPIDTempAdjustPara  },
-	{ RH_LOW_PID_TEMP_CASCADE_FACTOR,   IsTempRHPIDEnabled,  IsAlalogOutEnabled,    "PIDLoRHCasTempFct", HumidityLowPIDTempCascadeFactorPara  },
-	{ RH_LOW_PID_CASCADE_TEMP_STATE,    IsTempRHPIDEnabled,  IsAlalogOutEnabled,    "PIDLoRHCasOnTemp",   HumidityLowPIDTempCascadeStatePara  },
-	{ RH_OUT_POLARITY,                  IsRHOutActive,       IsAlalogOutEnabled,    "RH OutPolarity",    HumidityOutPolarityPara  },
-	{ RH_OUT_LOW_COUNT,                 IsRHOutActive,       IsAlalogOutEnabled,    "RH OutCntMin",     OutputCountsForHumidityMinimumPara  },
-	{ RH_OUT_HIGH_COUNT,                IsRHOutActive,       IsAlalogOutEnabled,    "RH OutCntMax",     OutputCountsForHumidityMaximumPara  },
-
+	
 	{ RTC_ENABLE_DISABLE,               NULL,               NULL,                   "Real Time Clock",    RTCSetupPara },
 	{ TIME_HOURS,                       IsRTCEnabled,       NULL,                   "Time: Hour",         TimeHourPara  },
 	{ TIME_MINUTES,                     IsRTCEnabled,       NULL,                   "Time: Minute",       TimeMinutePara  },
@@ -2399,11 +1832,6 @@ const PARA_INFO paraTableLCD [] PROGMEM =
 	{ BUZZER_OFF_TIME,                  IsAlarmEnabled,             NULL,           "BuzzerOFFTime",    BuzzerOffPara },     
 	{ BUZZER_DISABLE_TIME,              IsAlarmEnabled,             NULL,           "BuzzerDISTime",    BuzzerDisablePara },     
 	
-	//{ OUTPUT1_MAPPING,                  IsMasterReset,              NULL,           "OUTPUT1 MAPPING",   Output1MappingPara  },
-	//{ OUTPUT2_MAPPING,                  IsMasterReset,              NULL,           "OUTPUT2 MAPPING",   Output2MappingPara  },
-	//{ OUTPUT3_MAPPING,                  IsMasterReset,              NULL,           "OUTPUT3 MAPPING",   Output3MappingPara  },
-	//{ OUTPUT4_MAPPING,                  IsMasterReset,              NULL,           "OUTPUT4 MAPPING",   Output4MappingPara  },
-	
 	{ SOFT_VERSION,                     NULL,                       NULL,           "Version",            VersionPara },
 	
 	{ TEMP_RH_SENS_TYPE,                IsMasterReset,      IsTempOrRHEnabled,      "Temp/RH Sens type",  TempRHSensTypePara  },	
@@ -2414,13 +1842,7 @@ const PARA_INFO paraTableLCD [] PROGMEM =
 	{ ROOM_ID,                     NULL,                       NULL,           "ROOM ID",            ROOMIdPara },
 	
 	{ DP1_SENS_TYPE,               IsMasterReset,      IsDP1Enabled, "DP1SensType",     PresAbsSensTypePara  },
-	{ DP2_SENS_TYPE,              IsMasterReset,      IsDP2Enabled,  "DP2SensType",        PresDiffSensTypePara  },
-	{ DP3_SENS_TYPE,             IsMasterReset,      IsDP3Enabled,  "DP3SensType",       PresDiff3SensTypePara  },
-	
 	{ DP1_RANGE,                   IsMasterReset,      IsDP1Enabled, "DP1SenRng(Pa)",   PresAbsRange  },
-	{ DP2_RANGE,                  IsMasterReset,      IsDP2Enabled,   "DP2SenRng(Pa)",     PresDiffRange  },
-	{ DP3_RANGE,                 IsMasterReset,      IsDP3Enabled,   "DP3SenRng(Pa)",    PresDiff3Range  },
-	
 	{ DP_RANGE1_ADJ,               CheckSerialSet,      0, "DP RANGE1 ADJ",     PresRange1AdjPara  },
 	{ DP_RANGE2_ADJ,              CheckSerialSet,      0,  "DP RANGE2 ADJ",        PresRange2AdjPara  },
 	{ DP_RANGE3_ADJ,             CheckSerialSet,      0,  "DP RANGE3 ADJ",       PresRange3AdjPara  },
@@ -2733,7 +2155,7 @@ uint8_t GetParameterStr( uint8_t paraId, uint8_t *parastr )
 
 void SetParameterValue(int eepromAddr, int paraValue )
 {
-	OSWriteEEPromWord((uint8_t *)eepromAddr, paraValue);
+	OSWriteEEPromWord((unsigned int *)eepromAddr, paraValue);
 }
 
 // returns error code as a function return and actual set value in paraValue
@@ -2912,85 +2334,6 @@ static void ParameterOperationsOnHighSettings( uint8_t operationType, int16_t * 
    }
 }
 
-
-//static char * PartMCUpperAlarmOnPara( uint8_t operationType, int16_t * paraValue )
-//{
-	//ParameterOperationsOnHighSettings(operationType,
-	//paraValue,
-	//D_PART_MC_UPPER_ALARM_ON_LIMIT,
-	//MAX_PART_MC_UPPER_ALARM_ON_LIMIT,
-	//PARTICAL_MC_UPPER_ALARM_OFF_LIMIT,
-	//EA_PART_MC_UPPER_ALARM_ON_LIMIT );
-	//if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	//return NULL;
-	//return FormatParticalOneLine( displayStr, ERROR_OK, *paraValue );
-//}
-//
-//static char * PartMCUpperAlarmOffPara( uint8_t operationType, int16_t * paraValue )
-//{
-	//ParameterOperationsOnLowSettings(operationType,
-	//paraValue,
-	//D_PART_MC_UPPER_ALARM_OFF_LIMIT,
-	//MIN_PART_MC_UPPER_ALARM_OFF_LIMIT,
-	//PARTICAL_MC_UPPER_ALARM_ON_LIMIT,
-	//EA_PART_MC_UPPER_ALARM_OFF_LIMIT );
-	//if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	//return NULL;
-	//return FormatParticalOneLine( displayStr, ERROR_OK, *paraValue );
-//}
-//
-//static char * PartVOCUpperAlarmOnPara( uint8_t operationType, int16_t * paraValue )
-//{
-	//ParameterOperationsOnHighSettings(operationType,
-	//paraValue,
-	//D_PART_VOC_UPPER_ALARM_ON_LIMIT,
-	//MAX_PART_VOC_UPPER_ALARM_ON_LIMIT,
-	//PARTICAL_VOC_UPPER_ALARM_OFF_LIMIT,
-	//EA_PART_VOC_UPPER_ALARM_ON_LIMIT );
-	//if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	//return NULL;
-	//return FormatPartialStuffOneLine( displayStr, ERROR_OK, *paraValue );
-//}
-//
-//static char * PartVOCUpperAlarmOffPara( uint8_t operationType, int16_t * paraValue )
-//{
-	//ParameterOperationsOnLowSettings(operationType,
-	//paraValue,
-	//D_PART_VOC_UPPER_ALARM_OFF_LIMIT,
-	//MIN_PART_VOC_UPPER_ALARM_OFF_LIMIT,
-	//PARTICAL_VOC_UPPER_ALARM_ON_LIMIT,
-	//EA_PART_VOC_UPPER_ALARM_OFF_LIMIT );
-	//if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	//return NULL;
-	//return FormatPartialStuffOneLine( displayStr, ERROR_OK, *paraValue );
-//}
-//
-//static char * PartNOXUpperAlarmOnPara( uint8_t operationType, int16_t * paraValue )
-//{
-	//ParameterOperationsOnHighSettings(operationType,
-	//paraValue,
-	//D_PART_NOX_UPPER_ALARM_ON_LIMIT,
-	//MAX_PART_NOX_UPPER_ALARM_ON_LIMIT,
-	//PARTICAL_NOX_UPPER_ALARM_OFF_LIMIT,
-	//EA_PART_NOX_UPPER_ALARM_ON_LIMIT );
-	//if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	//return NULL;
-	//return FormatPartialStuffOneLine( displayStr, ERROR_OK, *paraValue );
-//}
-//
-//static char * PartNOXUpperAlarmOffPara( uint8_t operationType, int16_t * paraValue )
-//{
-	//ParameterOperationsOnLowSettings(operationType,
-	//paraValue,
-	//D_PART_NOX_UPPER_ALARM_OFF_LIMIT,
-	//MIN_PART_NOX_UPPER_ALARM_OFF_LIMIT,
-	//PARTICAL_NOX_UPPER_ALARM_ON_LIMIT,
-	//EA_PART_NOX_UPPER_ALARM_OFF_LIMIT );
-	//if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	//return NULL;
-	//return FormatPartialStuffOneLine( displayStr, ERROR_OK, *paraValue );
-//}
-
 static char * PresAbsUpperAlarmOffPara( uint8_t operationType, int16_t * paraValue )
 {
    ParameterOperationsOnLowSettings(operationType, 
@@ -3044,111 +2387,6 @@ static char * PresAbsLowerAlarmOnPara( uint8_t operationType, int16_t * paraValu
    return FormatDP1OneLine( displayStr, ERROR_OK, *paraValue );
 }
 
-
-static char * PresDiffUpperAlarmOffPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsOnLowSettings(operationType, 
-                                    paraValue, 
-                                    D_DP2_UPPER_ALARM_OFF_LIMIT, 
-                                    MIN_DP2_UPPER_ALARM_OFF_LIMIT, 
-                                    DP2_UPPER_ALARM_ON_LIMIT, 
-                                    EA_DP2_UPPER_ALARM_OFF_LIMIT );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatDP2OneLine( displayStr, ERROR_OK, *paraValue );
-}
-
-static char * PresDiffUpperAlarmOnPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsOnHighSettings(operationType, 
-                                     paraValue, 
-                                     D_DP2_UPPER_ALARM_ON_LIMIT, 
-                                     MAX_DP2_UPPER_ALARM_ON_LIMIT, 
-                                     DP2_UPPER_ALARM_OFF_LIMIT, 
-                                     EA_DP2_UPPER_ALARM_ON_LIMIT );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatDP2OneLine( displayStr, ERROR_OK, *paraValue );
-}
-
-static char * PresDiffLowerAlarmOffPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsOnHighSettings(operationType, 
-                                    paraValue, 
-                                    D_DP2_LOWER_ALARM_OFF_LIMIT, 
-                                    MAX_DP2_LOWER_ALARM_OFF_LIMIT, 
-                                    DP2_LOWER_ALARM_ON_LIMIT, 
-                                    EA_DP2_LOWER_ALARM_OFF_LIMIT );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatDP2OneLine( displayStr, ERROR_OK, *paraValue );
-}
-
-static char * PresDiffLowerAlarmOnPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsOnLowSettings(operationType, 
-                                     paraValue, 
-                                     D_DP2_LOWER_ALARM_ON_LIMIT, 
-                                     MIN_DP2_LOWER_ALARM_ON_LIMIT, 
-                                     DP2_LOWER_ALARM_OFF_LIMIT, 
-                                     EA_DP2_LOWER_ALARM_ON_LIMIT );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatDP2OneLine( displayStr, ERROR_OK, *paraValue );
-}
-
-static char * PresDiff3UpperAlarmOffPara( uint8_t operationType, int16_t * paraValue )
-{
-	ParameterOperationsOnLowSettings(operationType,
-	paraValue,
-	D_DP3_UPPER_ALARM_OFF_LIMIT,
-	MIN_DP3_UPPER_ALARM_OFF_LIMIT,
-	DP3_UPPER_ALARM_ON_LIMIT,
-	EA_DP3_UPPER_ALARM_OFF_LIMIT );
-	if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	return NULL;
-	return FormatDP3OneLine( displayStr, ERROR_OK, *paraValue );
-}
-
-static char * PresDiff3UpperAlarmOnPara( uint8_t operationType, int16_t * paraValue )
-{
-	ParameterOperationsOnHighSettings(operationType,
-	paraValue,
-	D_DP3_UPPER_ALARM_ON_LIMIT,
-	MAX_DP3_UPPER_ALARM_ON_LIMIT,
-	DP3_UPPER_ALARM_OFF_LIMIT,
-	EA_DP3_UPPER_ALARM_ON_LIMIT );
-	if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	return NULL;
-	return FormatDP3OneLine( displayStr, ERROR_OK, *paraValue );
-}
-
-static char * PresDiff3LowerAlarmOffPara( uint8_t operationType, int16_t * paraValue )
-{
-	ParameterOperationsOnHighSettings(operationType,
-	paraValue,
-	D_DP3_LOWER_ALARM_OFF_LIMIT,
-	MAX_DP3_LOWER_ALARM_OFF_LIMIT,
-	DP3_LOWER_ALARM_ON_LIMIT,
-	EA_DP3_LOWER_ALARM_OFF_LIMIT );
-	if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	return NULL;
-	return FormatDP3OneLine( displayStr, ERROR_OK, *paraValue );
-}
-
-static char * PresDiff3LowerAlarmOnPara( uint8_t operationType, int16_t * paraValue )
-{
-	ParameterOperationsOnLowSettings(operationType,
-	paraValue,
-	D_DP3_LOWER_ALARM_ON_LIMIT,
-	MIN_DP3_LOWER_ALARM_ON_LIMIT,
-	DP3_LOWER_ALARM_OFF_LIMIT,
-	EA_DP3_LOWER_ALARM_ON_LIMIT );
-	if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	return NULL;
-	return FormatDP3OneLine( displayStr, ERROR_OK, *paraValue );
-}
-
 static char * TempUpperAlarmOffPara( uint8_t operationType, int16_t * paraValue )
 {
    ParameterOperationsOnLowSettings(operationType, 
@@ -3187,20 +2425,6 @@ static char * TempLowerAlarmOffPara( uint8_t operationType, int16_t * paraValue 
    if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
       return NULL;
    return FormatTemperatureOneLine( displayStr, ERROR_OK, *paraValue, 2 );
-}
-
-static char * TempDiffAlarmPara(uint8_t operationType, int16_t * paraValue )
-{
-	ParameterOperationsSettings(operationType,
-	paraValue,
-	EA_TEMP_DIFF_ALARM_LIMIT,
-	500,
-	-2000,
-	2000 );
-	if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	return NULL;
-
-	return FormatTemperatureOneLine( displayStr, ERROR_OK, *paraValue, 2 );
 }
 
 static char * TempLowerAlarmOnPara( uint8_t operationType, int16_t * paraValue )
@@ -3268,227 +2492,9 @@ static char * HumidityLowerAlarmOnPara( uint8_t operationType, int16_t * paraVal
    return FormatHumidityOneLine( displayStr, ERROR_OK, *paraValue, 2 );
 }
 
-static char * PresAbsValForMinimumOutputPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsOnLowSettings(operationType, 
-                                    paraValue, 
-                                    D_DP1_OUT_LOW_PRES, 
-                                    MIN_DP1_OUT_LOW_PRES, 
-                                    DP1_OUT_HIGH_PRES, 
-                                    EA_DP1_OUT_LOW_PRES );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatDP1OneLine( displayStr, ERROR_OK, *paraValue );
-}
-
-static char * PresAbsValForMaximumOutputPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsOnHighSettings(operationType, 
-                                     paraValue, 
-                                     D_DP1_OUT_HIGH_PRES, 
-                                     MAX_DP1_OUT_HIGH_PRES, 
-                                     DP1_OUT_LOW_PRES, 
-                                     EA_DP1_OUT_HIGH_PRES );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatDP1OneLine( displayStr, ERROR_OK, *paraValue );
-}
-
-static char * PresDiffValForMinimumOutputPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsOnLowSettings(operationType, 
-                                    paraValue, 
-                                    D_DP2_OUT_LOW_PRES, 
-                                    MIN_DP2_OUT_LOW_PRES, 
-                                    DP2_OUT_HIGH_PRES, 
-                                    EA_DP2_OUT_LOW_PRES );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatDP2OneLine( displayStr, ERROR_OK, *paraValue );
-}
-
-static char * PresDiffValForMaximumOutputPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsOnHighSettings(operationType, 
-                                     paraValue, 
-                                     D_DP2_OUT_HIGH_PRES, 
-                                     MAX_DP2_OUT_HIGH_PRES, 
-                                     DP2_OUT_LOW_PRES, 
-                                     EA_DP2_OUT_HIGH_PRES );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatDP2OneLine( displayStr, ERROR_OK, *paraValue );
-}
-
-static char * TempValForMinimumOutputPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsOnLowSettings(operationType, 
-                                    paraValue, 
-                                    D_TEMP_OUT_LOW_TEMP, 
-                                    MIN_TEMP_OUT_LOW_TEMP, 
-                                    TEMP_OUT_HIGH_TEMP, 
-                                    EA_TEMP_OUT_LOW_TEMP );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatTemperatureOneLine( displayStr, ERROR_OK, *paraValue, 2 );
-}
-
-static char * TempValForMaximumOutputPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsOnHighSettings(operationType, 
-                                     paraValue, 
-                                     D_TEMP_OUT_HIGH_TEMP, 
-                                     MAX_TEMP_OUT_HIGH_TEMP, 
-                                     TEMP_OUT_LOW_TEMP, 
-                                     EA_TEMP_OUT_HIGH_TEMP );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatTemperatureOneLine( displayStr, ERROR_OK, *paraValue, 2 );
-}
-
-static char * HumidityValForMinimumOutputPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsOnLowSettings(operationType, 
-                                    paraValue, 
-                                    D_RH_OUT_LOW_RH, 
-                                    MIN_RH_OUT_LOW_RH, 
-                                    RH_OUT_HIGH_RH, 
-                                    EA_RH_OUT_LOW_RH );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatHumidityOneLine( displayStr, ERROR_OK, *paraValue, 2 );
-}
-
-static char * HumidityValForMaximumOutputPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsOnHighSettings(operationType, 
-                                     paraValue, 
-                                     D_RH_OUT_HIGH_RH, 
-                                     MAX_RH_OUT_HIGH_RH, 
-                                     RH_OUT_LOW_RH, 
-                                     EA_RH_OUT_HIGH_RH );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatHumidityOneLine( displayStr, ERROR_OK, *paraValue, 2 );
-}
-
-static char * OutputCountsForPresAbsMinimumPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsOnLowSettings(operationType, 
-                                    paraValue, 
-                                    D_DP1_OUT_LOW_COUNT, 
-                                    MIN_DP1_OUT_LOW_COUNT, 
-                                    DP1_OUT_HIGH_COUNT, 
-                                    EA_DP1_OUT_LOW_COUNT );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatInteger( *paraValue );
-}
-
-static char * OutputCountsForPresAbsMaximumPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsOnHighSettings(operationType, 
-                                     paraValue, 
-                                     D_DP1_OUT_HIGH_COUNT, 
-                                     MAX_DP1_OUT_HIGH_COUNT, 
-                                     DP1_OUT_LOW_COUNT, 
-                                     EA_DP1_OUT_HIGH_COUNT );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatInteger( *paraValue );
-}
-
-static char * OutputCountsForPresDiffMinimumPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsOnLowSettings(operationType, 
-                                    paraValue, 
-                                    D_DP2_OUT_LOW_COUNT, 
-                                    MIN_DP2_OUT_LOW_COUNT, 
-                                    DP2_OUT_HIGH_COUNT, 
-                                    EA_DP2_OUT_LOW_COUNT );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatInteger( *paraValue );
-}
-
-static char * OutputCountsForPresDiffMaximumPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsOnHighSettings(operationType, 
-                                     paraValue, 
-                                     D_DP2_OUT_HIGH_COUNT, 
-                                     MAX_DP2_OUT_HIGH_COUNT, 
-                                     DP2_OUT_LOW_COUNT, 
-                                     EA_DP2_OUT_HIGH_COUNT );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatInteger( *paraValue );
-}
-
-static char * OutputCountsForTempMinimumPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsOnLowSettings(operationType, 
-                                    paraValue, 
-                                    D_TEMP_OUT_LOW_COUNT, 
-                                    MIN_TEMP_OUT_LOW_COUNT, 
-                                    TEMP_OUT_HIGH_COUNT, 
-                                    EA_TEMP_OUT_LOW_COUNT );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatInteger( *paraValue );
-}
-
-static char * OutputCountsForTempMaximumPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsOnHighSettings(operationType, 
-                                     paraValue, 
-                                     D_TEMP_OUT_HIGH_COUNT, 
-                                     MAX_TEMP_OUT_HIGH_COUNT, 
-                                     TEMP_OUT_LOW_COUNT, 
-                                     EA_TEMP_OUT_HIGH_COUNT );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatInteger( *paraValue );
-}
-
-static char * OutputCountsForHumidityMinimumPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsOnLowSettings(operationType, 
-                                    paraValue, 
-                                    D_RH_OUT_LOW_COUNT, 
-                                    MIN_RH_OUT_LOW_COUNT, 
-                                    RH_OUT_HIGH_COUNT, 
-                                    EA_RH_OUT_LOW_COUNT );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatInteger( *paraValue );
-}
-
-static char * OutputCountsForHumidityMaximumPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsOnHighSettings(operationType, 
-                                     paraValue, 
-                                     D_RH_OUT_HIGH_COUNT, 
-                                     MAX_RH_OUT_HIGH_COUNT, 
-                                     RH_OUT_LOW_COUNT, 
-                                     EA_RH_OUT_HIGH_COUNT );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatInteger( *paraValue );
-}
-
 static char * PressureAbsUnitPara( uint8_t operationType, int16_t * paraValue )
 {
    return PressureUnitProcessPara( operationType, paraValue, D_DP1_UNIT, EA_DP1_UNIT );
-}
-
-static char * PressureDiffUnitPara( uint8_t operationType, int16_t * paraValue )
-{
-   return PressureUnitProcessPara( operationType, paraValue, D_DP2_UNIT, EA_DP2_UNIT );
-}
-
-static char * PressureDiff3UnitPara( uint8_t operationType, int16_t * paraValue )
-{
-	return PressureUnitProcessPara( operationType, paraValue, D_DP3_UNIT, EA_DP3_UNIT );
 }
 
 static char * PressureUnitProcessPara( uint8_t operationType, int16_t * paraValue, int16_t dfltValue, unsigned int eepromAddr )
@@ -3572,36 +2578,6 @@ static char * DP1AreaLengthPara( uint8_t operationType, int16_t * paraValue )
 	return displayStr;
 }
 
-static char * DP2AreaLengthPara( uint8_t operationType, int16_t * paraValue )
-{
-	ParameterOperationsSettings(operationType,
-	paraValue,
-	EA_DP2_AREA_LENGTH,
-	D_DP2_AREA_LEN,
-	MIN_DP2_AREA,
-	MAX_DP2_AREA );
-	if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	return NULL;
-	//sprintf( displayStr, "%d.%d mm", *paraValue / 1000, *paraValue % 1000 );
-	sprintf( displayStr, "%d mm", *paraValue );
-	return displayStr;
-}
-
-static char * DP3AreaLengthPara( uint8_t operationType, int16_t * paraValue )
-{
-	ParameterOperationsSettings(operationType,
-	paraValue,
-	EA_DP3_AREA_LENGTH,
-	D_DP3_AREA_LEN,
-	MIN_DP3_AREA,
-	MAX_DP3_AREA );
-	if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	return NULL;
-	//sprintf( displayStr, "%d.%d mm", *paraValue / 1000, *paraValue % 1000 );
-	sprintf( displayStr, "%d mm", *paraValue );
-	return displayStr;
-}
-
 static char * DP1AreaWidthPara( uint8_t operationType, int16_t * paraValue )
 {
 	ParameterOperationsSettings(operationType,
@@ -3610,36 +2586,6 @@ static char * DP1AreaWidthPara( uint8_t operationType, int16_t * paraValue )
 	D_DP1_AREA_WID,
 	MIN_DP1_AREA,
 	MAX_DP1_AREA );
-	if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	return NULL;
-	//sprintf( displayStr, "%d.%d", *paraValue / 1000, *paraValue % 1000 );
-	sprintf( displayStr, "%d mm", *paraValue );
-	return displayStr;
-}
-
-static char * DP2AreaWidthPara( uint8_t operationType, int16_t * paraValue )
-{
-	ParameterOperationsSettings(operationType,
-	paraValue,
-	EA_DP2_AREA_WIDTH,
-	D_DP2_AREA_WID,
-	MIN_DP2_AREA,
-	MAX_DP2_AREA );
-	if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	return NULL;
-	//sprintf( displayStr, "%d.%d", *paraValue / 1000, *paraValue % 1000 );
-	sprintf( displayStr, "%d mm", *paraValue );
-	return displayStr;
-}
-
-static char * DP3AreaWidthPara( uint8_t operationType, int16_t * paraValue )
-{
-	ParameterOperationsSettings(operationType,
-	paraValue,
-	EA_DP3_AREA_WIDTH,
-	D_DP3_AREA_WID,
-	MIN_DP3_AREA,
-	MAX_DP3_AREA );
 	if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
 	return NULL;
 	//sprintf( displayStr, "%d.%d", *paraValue / 1000, *paraValue % 1000 );
@@ -3661,80 +2607,6 @@ static char * DP1AreaRadiousPara( uint8_t operationType, int16_t * paraValue )
 	sprintf( displayStr, "%d mm", *paraValue );
 	return displayStr;
 }
-
-static char * DP2AreaRadiousPara( uint8_t operationType, int16_t * paraValue )
-{
-	ParameterOperationsSettings(operationType,
-	paraValue,
-	EA_DP2_AREA_RADIOUS,
-	D_DP2_AREA_RAD,
-	MIN_DP2_AREA,
-	MAX_DP2_AREA );
-	if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	return NULL;
-	//sprintf( displayStr, "%d.%d", *paraValue / 1000, *paraValue % 1000 );
-	sprintf( displayStr, "%d mm", *paraValue );
-	return displayStr;
-}
-
-static char * DP3AreaRadiousPara( uint8_t operationType, int16_t * paraValue )
-{
-	ParameterOperationsSettings(operationType,
-	paraValue,
-	EA_DP3_AREA_RADIOUS,
-	D_DP3_AREA_RAD,
-	MIN_DP3_AREA,
-	MAX_DP3_AREA );
-	if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	return NULL;
-	//sprintf( displayStr, "%d.%d", *paraValue / 1000, *paraValue % 1000 );
-	sprintf( displayStr, "%d mm", *paraValue );
-	return displayStr;
-}
-
-
-//static char * PresAbsAreaPara( uint8_t operationType, int16_t * paraValue )
-//{
-  //ParameterOperationsSettings(operationType, 
-                               //paraValue, 
-                               //EA_DP1_AREA,
-                               //D_DP1_AREA, 
-                               //MIN_DP1_AREA, 
-                               //MAX_DP1_AREA );
-   //if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      //return NULL;
-   //sprintf( displayStr, "%d.%d", *paraValue / 1000, *paraValue % 1000 );
-   //return displayStr;
-//}
-//
-//
-//static char * PresDiffAreaPara( uint8_t operationType, int16_t * paraValue )
-//{
-  //ParameterOperationsSettings(operationType, 
-                               //paraValue, 
-                               //EA_DP2_AREA,
-                               //D_DP2_AREA, 
-                               //MIN_DP2_AREA, 
-                               //MAX_DP2_AREA );
-   //if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      //return NULL;
-   //sprintf( displayStr, "%d.%d", *paraValue / 1000, *paraValue % 1000 );
-   //return displayStr;
-//}
-//
-//static char * PresDiff3AreaPara( uint8_t operationType, int16_t * paraValue )
-//{
-	//ParameterOperationsSettings(operationType,
-	//paraValue,
-	//EA_DP3_AREA,
-	//D_DP3_AREA,
-	//MIN_DP3_AREA,
-	//MAX_DP3_AREA );
-	//if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	//return NULL;
-	//sprintf( displayStr, "%d.%d", *paraValue / 1000, *paraValue % 1000 );
-	//return displayStr;
-//}
 
 static char * SerialBaudratePara(uint8_t operationType, int16_t * paraValue )
 {
@@ -3826,88 +2698,6 @@ static char * PresAbsRange(uint8_t operationType, int16_t * paraValue )
    //if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
       //return NULL;
    //return FormatInteger( *paraValue );
-}
-
-//static char * PresAbsSensMinCnt(uint8_t operationType, int16_t * paraValue )
-//{
-	//return ParaSetIntegerVal( operationType, paraValue, EA_DP1_SENS_MIN, 8, 1, 50 );
-//}
-//
-//static char * PresAbsSensMaxCnt(uint8_t operationType, int16_t * paraValue )
-//{
-	//return ParaSetIntegerVal( operationType, paraValue, EA_DP1_SENS_MAX, 52, 51, 300);
-//}
-//
-//static char * PresDiffSensMinCnt(uint8_t operationType, int16_t * paraValue )
-//{
-	//return ParaSetIntegerVal( operationType, paraValue, EA_DP2_SENS_MIN, 8, 1, 50 );
-//}
-//
-//static char * PresDiffSensMaxCnt(uint8_t operationType, int16_t * paraValue )
-//{
-	//return ParaSetIntegerVal( operationType, paraValue, EA_DP2_SENS_MAX, 52, 51, 300);
-//}
-//
-//static char * PresDiff3SensMinCnt(uint8_t operationType, int16_t * paraValue )
-//{
-	//return ParaSetIntegerVal( operationType, paraValue, EA_DP3_SENS_MIN, 8, 1, 50 );
-//}
-//
-//static char * PresDiff3SensMaxCnt(uint8_t operationType, int16_t * paraValue )
-//{
-	//return ParaSetIntegerVal( operationType, paraValue, EA_DP3_SENS_MAX, 52, 51, 300);
-//}
-
-static char * PresDiffRange(uint8_t operationType, int16_t * paraValue )
-{
-	return ParaSetfloatVal( operationType, paraValue, EA_DP2_RANGE, D_DP2_RANGE, MIN_DP2_RANGE, MAX_DP2_RANGE );
-	
-	//if(( operationType == (uint8_t)PARA_READ_VALUE_ONLY ) || ( operationType == (uint8_t)PARA_READ ))
-	//{
-		//*paraValue = OSReadEEPromWord((unsigned int *)EA_DP2_RANGE);
-		//return FormatInteger( *paraValue );
-	//}
-	//else if( operationType == (uint8_t)PARA_WRITE || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY)
-	//{
-		//if( *paraValue < 0 )
-		//*paraValue = 0; // roll over
-	//}
-	//else if( operationType == (uint8_t)PARA_DEFAULT )
-	//{
-		//*paraValue = D_DP2_RANGE;
-	//}
-	//
-	//OSWriteEEPromWord((unsigned int *)EA_DP2_RANGE, *paraValue);
-	//
-	//if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	//return NULL;
-	//return FormatInteger( *paraValue );
-}
-
-static char * PresDiff3Range(uint8_t operationType, int16_t * paraValue )
-{
-	return ParaSetfloatVal( operationType, paraValue, EA_DP3_RANGE, D_DP3_RANGE, MIN_DP3_RANGE, MAX_DP3_RANGE );
-	
-	//if(( operationType == (uint8_t)PARA_READ_VALUE_ONLY ) || ( operationType == (uint8_t)PARA_READ ))
-	//{
-		//*paraValue = OSReadEEPromWord((unsigned int *)EA_DP3_RANGE);
-		//return FormatInteger( *paraValue );
-	//}
-	//else if( operationType == (uint8_t)PARA_WRITE || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY)
-	//{
-		//if( *paraValue < 0 )
-		//*paraValue = 0; // roll over
-	//}
-	//else if( operationType == (uint8_t)PARA_DEFAULT )
-	//{
-		//*paraValue = D_DP3_RANGE;
-	//}
-	//
-	//OSWriteEEPromWord((unsigned int *)EA_DP3_RANGE, *paraValue);
-	//
-	//if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	//return NULL;
-	//return FormatInteger( *paraValue );
 }
 
 static char * TimeHourPara( uint8_t operationType, int16_t * paraValue )
@@ -4083,26 +2873,6 @@ static char * AHUIdPara(uint8_t operationType, int16_t * paraValue )
 	return ParaSetIntegerVal1( operationType, paraValue, EA_AHU_ID, 0, 0, 1000 );
 }
 
-static char * AHUCFMPara(uint8_t operationType, int16_t * paraValue )
-{
-	return ParaSetIntegerVal1( operationType, paraValue, EA_AHU_CFM, 0, 0, 32000 );
-}
-
-static char * AHUArea1Para(uint8_t operationType, int16_t * paraValue )
-{
-	return ParaSetIntegerVal1( operationType, paraValue, EA_AHU_AREA1, 0, 0, 32000 );
-}
-
-static char * AHUArea2Para(uint8_t operationType, int16_t * paraValue )
-{
-	return ParaSetIntegerVal1( operationType, paraValue, EA_AHU_AREA2, 0, 0, 32000 );
-}
-
-static char * AHUArea3Para(uint8_t operationType, int16_t * paraValue )
-{
-	return ParaSetIntegerVal1( operationType, paraValue, EA_AHU_AREA3, 0, 0, 32000 );
-}
-
 static char * DeviceIdPara(uint8_t operationType, int16_t * paraValue )
 {
    return ParaSetIntegerVal( operationType, paraValue, EA_DEVICE_ID, D_DEVICE_ID, MIN_DEVICE_ID, MAX_DEVICE_ID );
@@ -4148,36 +2918,6 @@ static char * AbsPresManpLmtPara(uint8_t operationType, int16_t * paraValue )
 	return ParaSetfloatVal( operationType, paraValue, EA_DP1_MANP_MAX_LIMIT, 0, GetParameterValue(DP1_MANP_THRESHOLD), GetParameterValue(DP1_RANGE) );
 }
 
-static char * DiffPresManpThPara(uint8_t operationType, int16_t * paraValue )
-{
-	return ParaSetfloatVal( operationType, paraValue, EA_DP2_MANP_THRESHOLD, 0, 0, 1000 );
-}
-
-static char * DiffPresManpLmtPara(uint8_t operationType, int16_t * paraValue )
-{
-	return ParaSetfloatVal( operationType, paraValue, EA_DP2_MANP_MAX_LIMIT, 0, GetParameterValue(DP2_MANP_THRESHOLD), GetParameterValue(DP2_RANGE) );
-}
-
-static char * DiffPres3ManpThPara(uint8_t operationType, int16_t * paraValue )
-{
-	return ParaSetfloatVal( operationType, paraValue, EA_DP3_MANP_THRESHOLD, 0, 0, 1000 );
-}
-
-static char * DiffPres3ManpLmtPara(uint8_t operationType, int16_t * paraValue )
-{
-	return ParaSetfloatVal( operationType, paraValue, EA_DP3_MANP_MAX_LIMIT, 0, GetParameterValue(DP3_MANP_THRESHOLD), GetParameterValue(DP3_RANGE) );
-}
-
-
-static char * DiffPresZeroRangePara(uint8_t operationType, int16_t * paraValue )
-{
-   return ParaSetIntegerVal( operationType, paraValue, EA_DP2_ZERO_RNG, D_DP2_ZERO_RNG, MIN_DP2_ZERO_RNG, MAX_DP2_ZERO_RNG );
-}
-
-static char * DiffPres3ZeroRangePara(uint8_t operationType, int16_t * paraValue )
-{
-	return ParaSetIntegerVal( operationType, paraValue, EA_DP3_ZERO_RNG, D_DP3_ZERO_RNG, MIN_DP3_ZERO_RNG, MAX_DP3_ZERO_RNG );
-}
 static char * AbsPresZeroAdjustPara(uint8_t operationType, int16_t * paraValue )
 {
    return ParaSetfloatVal( operationType, paraValue, EA_DP1_ZERO_ADJ, D_DP1_ZERO_ADJ, MIN_DP1_ZERO_ADJ, MAX_DP1_ZERO_ADJ );
@@ -4213,20 +2953,6 @@ static char * PresRange6AdjPara(uint8_t operationType, int16_t * paraValue )
 	return ParaSetfloatVal( operationType, paraValue, EA_DP_RANGE6_ADJ, 0, -1000, 1000 );
 }
 
-static char * DiffPresZeroAdjustPara(uint8_t operationType, int16_t * paraValue )
-{
-   //if( operationType == PARA_DEFAULT )
-      //return FormatInteger( *paraValue );
-   return ParaSetIntegerVal( operationType, paraValue, EA_DP2_ZERO_ADJ, D_DP2_ZERO_ADJ, MIN_DP2_ZERO_ADJ, MAX_DP2_ZERO_ADJ );
-}
-
-static char * DiffPres3ZeroAdjustPara(uint8_t operationType, int16_t * paraValue )
-{
-	//if( operationType == PARA_DEFAULT )
-	//return FormatInteger( *paraValue );
-	return ParaSetIntegerVal( operationType, paraValue, EA_DP3_ZERO_ADJ, D_DP3_ZERO_ADJ, MIN_DP3_ZERO_ADJ, MAX_DP3_ZERO_ADJ );
-}
-
 static char * HumidityZeroAdjustPara(uint8_t operationType, int16_t * paraValue )
 {
    //if( operationType == PARA_DEFAULT )
@@ -4234,25 +2960,11 @@ static char * HumidityZeroAdjustPara(uint8_t operationType, int16_t * paraValue 
    return ParaSetIntegerVal( operationType, paraValue, EA_RH_ZERO_ADJ, D_RH_ZERO_ADJ, MIN_RH_ZERO_ADJ, MAX_RH_ZERO_ADJ );
 }
 
-static char * Humidity2ZeroAdjustPara(uint8_t operationType, int16_t * paraValue )
-{
-	//if( operationType == PARA_DEFAULT )
-	//return FormatInteger( *paraValue );
-	return ParaSetIntegerVal( operationType, paraValue, EA_RH2_ZERO_ADJ, D_RH_ZERO_ADJ, MIN_RH_ZERO_ADJ, MAX_RH_ZERO_ADJ );
-}
-
 static char * TempZeroAdjustPara(uint8_t operationType, int16_t * paraValue )
 {
    //if( operationType == PARA_DEFAULT )
       //return FormatInteger( *paraValue );
    return ParaSetIntegerVal( operationType, paraValue, EA_TEMP_ZERO_ADJ, D_TEMP_ZERO_ADJ, MIN_TEMP_ZERO_ADJ, MAX_TEMP_ZERO_ADJ );
-}
-
-static char * Temp2ZeroAdjustPara(uint8_t operationType, int16_t * paraValue )
-{
-	//if( operationType == PARA_DEFAULT )
-	//return FormatInteger( *paraValue );
-	return ParaSetIntegerVal( operationType, paraValue, EA_TEMP2_ZERO_ADJ, D_TEMP_ZERO_ADJ, MIN_TEMP_ZERO_ADJ, MAX_TEMP_ZERO_ADJ );
 }
 
 static char * TempFireAlmSetPara(uint8_t operationType, int16_t * paraValue )
@@ -4305,298 +3017,6 @@ static char * BuzzerDisablePara( uint8_t operationType, int16_t * paraValue )
    return ParaSetIntegerVal( operationType, paraValue, EA_BUZZER_DISABLE_TIME, D_BUZZER_DISABLE_TIME, MIN_BUZZER_DISABLE_TIME, MAX_BUZZER_DISABLE_TIME );
 }
 
-static char * PresAbsOutputTypePara( uint8_t operationType, int16_t * paraValue )
-{
-    return ParaOutputType( EA_DP1_OUTPUT_TYPE, operationType, paraValue );
-}
-
-static char * PresDiffOutputTypePara( uint8_t operationType, int16_t * paraValue )
-{
-    return ParaOutputType( EA_DP2_OUTPUT_TYPE, operationType, paraValue );
-}
-
-static char * TempOutputTypePara( uint8_t operationType, int16_t * paraValue )
-{
-    return ParaOutputType( EA_TEMP_OUTPUT_TYPE, operationType, paraValue );
-}
-
-static char * HumidityOutputTypePara( uint8_t operationType, int16_t * paraValue )
-{
-    return ParaOutputType( EA_RH_OUTPUT_TYPE, operationType, paraValue );
-}
-
-static char * PresAbsPIDSetpointPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettings(operationType, 
-                               paraValue, 
-                               EA_DP1_PID_SET_VALUE,
-                               D_DP1_PID_SET_VALUE, 
-                               MIN_DP1_PID_SET_VALUE, 
-                               MAX_DP1_PID_SET_VALUE );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-
-   return FormatDP1OneLine( displayStr, ERROR_OK, *paraValue );
-}
-
-static char * PresDiffPIDSetpointPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettings(operationType, 
-                               paraValue, 
-                               EA_DP2_PID_SET_VALUE,
-                               D_DP2_PID_SET_VALUE, 
-                               MIN_DP2_PID_SET_VALUE, 
-                               MAX_DP2_PID_SET_VALUE );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-
-   return FormatDP2OneLine( displayStr, ERROR_OK, *paraValue );
-}
-
-static char * TempPIDSetpointPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettings(operationType, 
-                               paraValue, 
-                               EA_TEMP_PID_SET_VALUE,
-                               D_TEMP_PID_SET_VALUE, 
-                               MIN_TEMP_PID_SET_VALUE, 
-                               MAX_TEMP_PID_SET_VALUE );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-
-   return FormatTemperatureOneLine( displayStr, ERROR_OK, *paraValue, 2 );
-}
-
-static char * HumidityPIDSetpointPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettings(operationType, 
-                               paraValue, 
-                               EA_RH_PID_SET_VALUE,
-                               D_RH_PID_SET_VALUE, 
-                               MIN_RH_PID_SET_VALUE, 
-                               MAX_RH_PID_SET_VALUE );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-
-   return FormatHumidityOneLine( displayStr, ERROR_OK, *paraValue, 2 );
-}
-
-
-
-
-
-static char * PresAbsPIDStartupPercentPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettings(operationType, 
-                               paraValue, 
-                               EA_DP1_PID_STARTUP_PERCENT,
-                               D_DP1_PID_STARTUP_PERCENT, 
-                               MIN_DP1_PID_STARTUP_PERCENT, 
-                               MAX_DP1_PID_STARTUP_PERCENT );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   sprintf( displayStr, "%d.%d", *paraValue / 10, *paraValue % 10 );
-   return displayStr;
-}
-
-static char * PresAbsPIDKpPara( uint8_t operationType, int16_t * paraValue )
-{
-   return ParaSetIntegerVal(operationType, 
-                            paraValue, 
-                            EA_DP1_PID_KP,
-                            D_DP1_PID_KP, 
-                            MIN_DP1_PID_KP, 
-                            MAX_DP1_PID_KP );
-}
-
-static char * PresAbsPIDTiPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettings(operationType, 
-                               paraValue, 
-                               EA_DP1_PID_TI,
-                               D_DP1_PID_TI, 
-                               MIN_DP1_PID_TI, 
-                               MAX_DP1_PID_TI );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   sprintf( displayStr, "%d.%d", *paraValue / 10, *paraValue % 10 );
-   return displayStr;
-}
-
-static char * PresAbsPIDTdPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettings(operationType, 
-                               paraValue, 
-                               EA_DP1_PID_TD,
-                               D_DP1_PID_TD, 
-                               MIN_DP1_PID_TD, 
-                               MAX_DP1_PID_TD );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   sprintf( displayStr, "%d.%d", *paraValue / 100, *paraValue % 100 );
-   return displayStr;
-}
-
-
-static char * PresDiffPIDStartupPercentPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettings(operationType, 
-                               paraValue, 
-                               EA_DP2_PID_STARTUP_PERCENT,
-                               D_DP2_PID_STARTUP_PERCENT, 
-                               MIN_DP2_PID_STARTUP_PERCENT, 
-                               MAX_DP2_PID_STARTUP_PERCENT );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   sprintf( displayStr, "%d.%d", *paraValue / 10, *paraValue % 10 );
-   return displayStr;
-}
-
-static char * PresDiffPIDKpPara( uint8_t operationType, int16_t * paraValue )
-{
-   return ParaSetIntegerVal(operationType, 
-                            paraValue, 
-                            EA_DP2_PID_KP,
-                            D_DP2_PID_KP, 
-                            MIN_DP2_PID_KP, 
-                            MAX_DP2_PID_KP );
-}
-
-static char * PresDiffPIDTiPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettings(operationType, 
-                               paraValue, 
-                               EA_DP2_PID_TI,
-                               D_DP2_PID_TI, 
-                               MIN_DP2_PID_TI, 
-                               MAX_DP2_PID_TI );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   sprintf( displayStr, "%d.%d", *paraValue / 10, *paraValue % 10 );
-   return displayStr;
-}
-
-static char * PresDiffPIDTdPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettings(operationType, 
-                               paraValue, 
-                               EA_DP2_PID_TD,
-                               D_DP2_PID_TD, 
-                               MIN_DP2_PID_TD, 
-                               MAX_DP2_PID_TD );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   sprintf( displayStr, "%d.%d", *paraValue / 100, *paraValue % 100 );
-   return displayStr;
-}
-
-
-static char * TempPIDStartupPercentPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettings(operationType, 
-                               paraValue, 
-                               EA_TEMP_PID_STARTUP_PERCENT,
-                               D_TEMP_PID_STARTUP_PERCENT, 
-                               MIN_TEMP_PID_STARTUP_PERCENT, 
-                               MAX_TEMP_PID_STARTUP_PERCENT );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   sprintf( displayStr, "%d.%d", *paraValue / 10, *paraValue % 10 );
-   return displayStr;
-}
-
-static char * TempPIDKpPara( uint8_t operationType, int16_t * paraValue )
-{
-   return ParaSetIntegerVal(operationType, 
-                            paraValue, 
-                            EA_TEMP_PID_KP,
-                            D_TEMP_PID_KP, 
-                            MIN_TEMP_PID_KP, 
-                            MAX_TEMP_PID_KP );
-}
-
-static char * TempPIDTiPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettings(operationType, 
-                               paraValue, 
-                               EA_TEMP_PID_TI,
-                               D_TEMP_PID_TI, 
-                               MIN_TEMP_PID_TI, 
-                               MAX_TEMP_PID_TI );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   sprintf( displayStr, "%d.%d", *paraValue / 10, *paraValue % 10 );
-   return displayStr;
-}
-
-static char * TempPIDTdPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettings(operationType, 
-                               paraValue, 
-                               EA_TEMP_PID_TD,
-                               D_TEMP_PID_TD, 
-                               MIN_TEMP_PID_TD, 
-                               MAX_TEMP_PID_TD );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   sprintf( displayStr, "%d.%d", *paraValue / 100, *paraValue % 100 );
-   return displayStr;
-}
-
-
-static char * HumidityPIDStartupPercentPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettings(operationType, 
-                               paraValue, 
-                               EA_RH_PID_STARTUP_PERCENT,
-                               D_RH_PID_STARTUP_PERCENT, 
-                               MIN_RH_PID_STARTUP_PERCENT, 
-                               MAX_RH_PID_STARTUP_PERCENT );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   sprintf( displayStr, "%d.%d", *paraValue / 10, *paraValue % 10 );
-   return displayStr;
-}
-
-static char * HumidityPIDKpPara( uint8_t operationType, int16_t * paraValue )
-{
-   return ParaSetIntegerVal(operationType, 
-                            paraValue, 
-                            EA_RH_PID_KP,
-                            D_RH_PID_KP, 
-                            MIN_RH_PID_KP, 
-                            MAX_RH_PID_KP );
-}
-
-static char * HumidityPIDTiPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettings(operationType, 
-                               paraValue, 
-                               EA_RH_PID_TI,
-                               D_RH_PID_TI, 
-                               MIN_RH_PID_TI, 
-                               MAX_RH_PID_TI );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   sprintf( displayStr, "%d.%d", *paraValue / 10, *paraValue % 10 );
-   return displayStr;
-}
-
-static char * HumidityPIDTdPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettings(operationType, 
-                               paraValue, 
-                               EA_RH_PID_TD,
-                               D_RH_PID_TD, 
-                               MIN_RH_PID_TD, 
-                               MAX_RH_PID_TD );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   sprintf( displayStr, "%d.%d", *paraValue / 100, *paraValue % 100 );
-   return displayStr;
-}
-
-
 static char * TempRHSensTypePara( uint8_t operationType, int16_t * paraValue )
 {
    //ParameterOperationsSettingsRolloverNoDefault( operationType, paraValue, EA_TEMP_RH_SENS_TYPE, 0, 3 );
@@ -4623,85 +3043,10 @@ static char * TempRHSensTypePara( uint8_t operationType, int16_t * paraValue )
    return displayStr;
 }
 
-static char * TempRH2SensTypePara( uint8_t operationType, int16_t * paraValue )
-{
-	//ParameterOperationsSettingsRolloverNoDefault( operationType, paraValue, EA_TEMP_RH_SENS_TYPE, 0, 3 );
-	ParameterOperationsSettingsRollover( operationType, paraValue, EA_TEMP_RH2_SENS_TYPE, TEMP_RH_SENS_SHT25, 0, 2 );
-
-	if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	return NULL;
-	if (IsLCDDisplay())
-	{
-		switch( *paraValue )
-		{
-			case TEMP_RH_SENS_SHT25: locked_sprintf_P( displayStr, PSTR("SHT25"));
-			break;
-			//case TEMP_RH_SENS_SHT35: locked_sprintf_P( displayStr, PSTR("SHT35"));
-			//break;
-			case TEMP_RH_SENS_IDT_HS3100:
-			locked_sprintf_P( displayStr, PSTR("IDT3100"));
-			break;
-			case TEMP_RH_SENS_NONE:
-			default:                 locked_sprintf_P( displayStr, PSTR("NONE"));
-			break;
-		}
-	}
-	return displayStr;
-}
-
-//static char * ParticalSizeTypePara(uint8_t operationType, int16_t * paraValue )
-//{
-	//ParameterOperationsSettingsRolloverNoDefault( operationType, paraValue, EA_PARTICAL_SIZE_TYPE, 0, 3 );
-//
-	//if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	//return NULL;
-	//if (IsLCDDisplay())
-	//{
-		//switch( *paraValue )
-		//{
-			//case PARTICAL_SIZE_1_0:    locked_sprintf_P( displayStr, PSTR("PM 1.0"));
-			//break;
-			//case PARTICAL_SIZE_2_5:  locked_sprintf_P( displayStr, PSTR("PM 2.5"));
-			//break;
-			//case PARTICAL_SIZE_4_0:  locked_sprintf_P( displayStr, PSTR("PM 4.0"));
-			//break;
-			//case PARTICAL_SIZE_10_0:
-			//default:                  locked_sprintf_P( displayStr, PSTR("PM 10.0"));
-			//break;
-		//}
-	//}
-	//return displayStr;
-//}
-//
-//static char * ParticalSensTypePara(uint8_t operationType, int16_t * paraValue )
-//{
-	//ParameterOperationsSettingsRolloverNoDefault( operationType, paraValue, EA_PARTICAL_SENS_TYPE, 0, 3 );
-//
-	//if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	//return NULL;
-	//if (IsLCDDisplay())
-	//{
-		//switch( *paraValue )
-		//{
-			//case PARTICAL_SENS_SEN55:    locked_sprintf_P( displayStr, PSTR("SEN55"));
-			//break;
-			//case PARTICAL_SENS_ISP7100:  locked_sprintf_P( displayStr, PSTR("ISP7100"));
-			//break;
-			//case PARTICAL_SENS_ISP5100:  locked_sprintf_P( displayStr, PSTR("ISP5100"));
-			//break;
-			//case PARTICAL_SENS_NONE:
-			//default:                  locked_sprintf_P( displayStr, PSTR("NONE"));
-			//break;
-		//}
-	//}
-	//return displayStr;
-//}
-//
-
 static char * PresAbsSensTypePara(uint8_t operationType, int16_t * paraValue )
 {
    //ParameterOperationsSettingsRolloverNoDefault( operationType, paraValue, EA_DP1_SENS_TYPE, 0, 3 )
-	ParameterOperationsSettingsRollover( operationType, paraValue, EA_DP1_SENS_TYPE, PRES_SENS_SM9543, 0, 2 );
+	ParameterOperationsSettingsRollover( operationType, paraValue, EA_DP1_SENS_TYPE, PRES_SENS_SM9543, 0, 3 );
 	
    if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
       return NULL;
@@ -4713,58 +3058,14 @@ static char * PresAbsSensTypePara(uint8_t operationType, int16_t * paraValue )
                                     break;
           case PRES_SENS_XGZP6891D:   locked_sprintf_P( displayStr, PSTR("XGZP6891D"));
                                     break;
+		  case PRES_SENS_WF200DP:   locked_sprintf_P( displayStr, PSTR("WF200DP"));
+									 break;
           case PRES_SENS_NONE: 
           default:                  locked_sprintf_P( displayStr, PSTR("NONE"));
                                     break;
        }
    }
    return displayStr;
-}
-
-static char * PresDiffSensTypePara(uint8_t operationType, int16_t * paraValue )
-{
-    //ParameterOperationsSettingsRolloverNoDefault( operationType, paraValue, EA_DP2_SENS_TYPE, 0, 3 );
-	ParameterOperationsSettingsRollover( operationType, paraValue, EA_DP2_SENS_TYPE, PRES_SENS_SM9543, 0, 2);
-	
-    if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-       return NULL;
-    if (IsLCDDisplay())
-    {
-        switch( *paraValue )
-        {                                               
-           case PRES_SENS_SM9543:    locked_sprintf_P( displayStr, PSTR("SM9543"));
-                                     break;
-           case PRES_SENS_XGZP6891D:   locked_sprintf_P( displayStr, PSTR("XGZP6891D"));
-                                     break;
-           case PRES_SENS_NONE: 
-           default:                  locked_sprintf_P( displayStr, PSTR("NONE"));
-                                     break;
-        }
-    }
-    return displayStr;
-}
-
-static char * PresDiff3SensTypePara(uint8_t operationType, int16_t * paraValue )
-{
-	//ParameterOperationsSettingsRolloverNoDefault( operationType, paraValue, EA_DP3_SENS_TYPE, 0, 3 );
-	ParameterOperationsSettingsRollover( operationType, paraValue, EA_DP3_SENS_TYPE, PRES_SENS_SM9543, 0, 2 );
-	
-	if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	return NULL;
-	if (IsLCDDisplay())
-	{
-		switch( *paraValue )
-		{
-			case PRES_SENS_SM9543:    locked_sprintf_P( displayStr, PSTR("SM9543"));
-			break;
-			case PRES_SENS_XGZP6891D:   locked_sprintf_P( displayStr, PSTR("XGZP6891D"));
-			break;
-			case PRES_SENS_NONE:
-			default:                  locked_sprintf_P( displayStr, PSTR("NONE"));
-			break;
-		}
-	}
-	return displayStr;
 }
 
 static char * DP1AreaTypePara(uint8_t operationType, int16_t * paraValue )
@@ -4788,66 +3089,9 @@ static char * DP1AreaTypePara(uint8_t operationType, int16_t * paraValue )
 	return displayStr;
 }
 
-static char * DP2AreaTypePara(uint8_t operationType, int16_t * paraValue )
-{
-	ParameterOperationsSettingsRollover( operationType, paraValue, EA_DP2_AREA_TYPE, PRES_AREA_SQUARE, 0, 1 );
-	
-	if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	return NULL;
-	if (IsLCDDisplay())
-	{
-		switch( *paraValue )
-		{
-			case PRES_AREA_SQUARE:    locked_sprintf_P( displayStr, PSTR("SQUARE"));
-			break;
-			case PRES_AREA_ROUND:     locked_sprintf_P( displayStr, PSTR("ROUND"));
-			break;
-			default:                  locked_sprintf_P( displayStr, PSTR("UNKNOWN"));
-			break;
-		}
-	}
-	return displayStr;
-}
-
-static char * DP3AreaTypePara(uint8_t operationType, int16_t * paraValue )
-{
-	ParameterOperationsSettingsRollover( operationType, paraValue, EA_DP1_AREA_TYPE, PRES_AREA_SQUARE, 0, 1 );
-	
-	if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-	return NULL;
-	if (IsLCDDisplay())
-	{
-		switch( *paraValue )
-		{
-			case PRES_AREA_SQUARE:    locked_sprintf_P( displayStr, PSTR("SQUARE"));
-			break;
-			case PRES_AREA_ROUND:     locked_sprintf_P( displayStr, PSTR("ROUND"));
-			break;
-			default:                  locked_sprintf_P( displayStr, PSTR("UNKNOWN"));
-			break;
-		}
-	}
-	return displayStr;
-}
-
-//static char * ParticalAlarmSetupPara( uint8_t operationType, int16_t * paraValue )
-//{
-	//return AlarmSetupPara( operationType, paraValue, EA_PARTICAL_ALARM_SETUP );
-//}
-
 static char * PresAbsAlarmSetupPara( uint8_t operationType, int16_t * paraValue )
 {
    return AlarmSetupPara( operationType, paraValue, EA_DP1_ALARM_SETUP );
-}
-
-static char * PresDiffAlarmSetupPara( uint8_t operationType, int16_t * paraValue )
-{
-   return AlarmSetupPara( operationType, paraValue, EA_DP2_ALARM_SETUP );
-}
-
-static char * PresDiff3AlarmSetupPara( uint8_t operationType, int16_t * paraValue )
-{
-	return AlarmSetupPara( operationType, paraValue, EA_DP3_ALARM_SETUP );
 }
 
 static char * TempAlarmSetupPara( uint8_t operationType, int16_t * paraValue )
@@ -4905,319 +3149,6 @@ static char * AlarmSetupPara( uint8_t operationType, int16_t * paraValue, unsign
 
 }
 
-static char * PresAbsOutPolarityPara( uint8_t operationType, int16_t * paraValue )
-{
-   return SetOutPolarityPara( operationType, paraValue, EA_DP1_OUT_POLARITY, D_DP1_OUT_POLARITY );
-}
-
-static char * PresDiffOutPolarityPara( uint8_t operationType, int16_t * paraValue )
-{
-   return SetOutPolarityPara( operationType, paraValue, EA_DP2_OUT_POLARITY, D_DP2_OUT_POLARITY );
-}
-
-static char * TempOutPolarityPara( uint8_t operationType, int16_t * paraValue )
-{
-   return SetOutPolarityPara( operationType, paraValue, EA_TEMP_OUT_POLARITY, D_TEMP_OUT_POLARITY );
-}
-
-static char * HumidityOutPolarityPara( uint8_t operationType, int16_t * paraValue )
-{
-   return SetOutPolarityPara( operationType, paraValue, EA_RH_OUT_POLARITY, D_RH_OUT_POLARITY );
-}
-
-
-static char * TempHighPIDRHAdjustPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettings( operationType, paraValue, EA_TEMP_HIGH_PID_RH_ADJUST, D_TEMP_HIGH_PID_RH_ADJUST, MIN_TEMP_HIGH_PID_RH_ADJUST, MAX_TEMP_HIGH_PID_RH_ADJUST );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatTemperatureOneLine( displayStr, ERROR_OK, *paraValue, 2 );
-}
-
-static char * TempLowPIDRHAdjustPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettings( operationType, paraValue, EA_TEMP_LOW_PID_RH_ADJUST, D_TEMP_LOW_PID_RH_ADJUST, MIN_TEMP_LOW_PID_RH_ADJUST, MAX_TEMP_LOW_PID_RH_ADJUST );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatTemperatureOneLine( displayStr, ERROR_OK, *paraValue, 2 );
-}
-
-
-static char * TempHighPIDRHCascadeFactorPara( uint8_t operationType, int16_t * paraValue )
-{
-   double result;
-
-   ParameterOperationsSettings( operationType, paraValue, EA_TEMP_HIGH_PID_RH_CASCADE_FACTOR, D_TEMP_HIGH_PID_RH_CASCADE_FACTOR, MIN_TEMP_HIGH_PID_RH_CASCADE_FACTOR, MAX_TEMP_HIGH_PID_RH_CASCADE_FACTOR );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   if (IsLCDDisplay())
-   {  
-	  result = (*paraValue) / 100.0;
-	  dtostrf( result, sizeof(formatedValue)-1, 2, formatedValue);
-	  strcpy( formatedValue, strtrim(formatedValue));
-	  sprintf(displayStr, formatedValue);
-   }
-   return displayStr;
-}
-
-static char * TempLowPIDRHCascadeFactorPara( uint8_t operationType, int16_t * paraValue )
-{
-   double result;
-
-   ParameterOperationsSettings( operationType, paraValue, EA_TEMP_LOW_PID_RH_CASCADE_FACTOR, D_TEMP_LOW_PID_RH_CASCADE_FACTOR, MIN_TEMP_LOW_PID_RH_CASCADE_FACTOR, MAX_TEMP_LOW_PID_RH_CASCADE_FACTOR );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   if (IsLCDDisplay())
-   {
-      result = (*paraValue) / 100.0;
-      dtostrf( result, sizeof(formatedValue)-1, 2, formatedValue);
-      strcpy( formatedValue, strtrim(formatedValue));
-      sprintf(displayStr, formatedValue);
-   }
-   return displayStr;
-}
-
-
-
-static char * HumidityHighPIDTempAdjustPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettings( operationType, paraValue, EA_RH_HIGH_PID_TEMP_ADJUST, D_RH_HIGH_PID_TEMP_ADJUST, MIN_RH_HIGH_PID_TEMP_ADJUST, MAX_RH_HIGH_PID_TEMP_ADJUST );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatHumidityOneLine( displayStr, ERROR_OK, *paraValue, 2 );
-}
-
-
-static char * HumidityLowPIDTempAdjustPara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettings( operationType, paraValue, EA_RH_LOW_PID_TEMP_ADJUST, D_RH_LOW_PID_TEMP_ADJUST, MIN_RH_LOW_PID_TEMP_ADJUST, MAX_RH_LOW_PID_TEMP_ADJUST );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   return FormatHumidityOneLine( displayStr, ERROR_OK, *paraValue, 2 );
-}
-
-
-static char * HumidityHighPIDTempCascadeFactorPara( uint8_t operationType, int16_t * paraValue )
-{
-   double result;
-
-   ParameterOperationsSettings( operationType, paraValue, EA_RH_HIGH_PID_TEMP_CASCADE_FACTOR, D_RH_HIGH_PID_TEMP_CASCADE_FACTOR, MIN_RH_HIGH_PID_TEMP_CASCADE_FACTOR, MAX_RH_HIGH_PID_TEMP_CASCADE_FACTOR );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   if (IsLCDDisplay())
-   {
-      result = (*paraValue) / 100.0;
-      dtostrf( result, sizeof(formatedValue)-1, 2, formatedValue);
-      strcpy( formatedValue, strtrim(formatedValue));
-      sprintf(displayStr, formatedValue);
-   }
-   return displayStr;
-}
-
-
-static char * HumidityLowPIDTempCascadeFactorPara( uint8_t operationType, int16_t * paraValue )
-{
-   double result;
-
-   ParameterOperationsSettings( operationType, paraValue, EA_RH_LOW_PID_TEMP_CASCADE_FACTOR, D_RH_LOW_PID_TEMP_CASCADE_FACTOR, MIN_RH_LOW_PID_TEMP_CASCADE_FACTOR, MAX_RH_LOW_PID_TEMP_CASCADE_FACTOR );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   if (IsLCDDisplay())
-   {
-      result = (*paraValue) / 100.0;
-      dtostrf( result, sizeof(formatedValue)-1, 2, formatedValue);
-      strcpy( formatedValue, strtrim(formatedValue));
-      sprintf(displayStr, formatedValue);
-   }
-   return displayStr;
-}
-
-
-static char * TempHighPIDRHCascadeStatePara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettingsRollover( operationType, paraValue, EA_TEMP_HIGH_PID_CASCADE_RH_STATE, D_TEMP_HIGH_PID_CASCADE_RH_STATE, MIN_TEMP_HIGH_PID_CASCADE_RH_STATE, MAX_TEMP_HIGH_PID_CASCADE_RH_STATE );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   if ((*paraValue) < 0 )
-      locked_sprintf_P( displayStr, PSTR("LOW"));
-   else if ((*paraValue) > 0 )
-      locked_sprintf_P( displayStr, PSTR("HI"));
-   else if ((*paraValue) == 0 )
-      locked_sprintf_P( displayStr, PSTR("ANY"));
-
-   return displayStr;
-}
-
-
-static char * TempLowPIDRHCascadeStatePara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettingsRollover( operationType, paraValue, EA_TEMP_LOW_PID_CASCADE_RH_STATE, D_TEMP_LOW_PID_CASCADE_RH_STATE, MIN_TEMP_LOW_PID_CASCADE_RH_STATE, MAX_TEMP_LOW_PID_CASCADE_RH_STATE );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   if ((*paraValue) < 0 )
-      locked_sprintf_P( displayStr, PSTR("LOW"));
-   else if ((*paraValue) > 0 )
-      locked_sprintf_P( displayStr, PSTR("HI"));
-   else if ((*paraValue) == 0 )
-      locked_sprintf_P( displayStr, PSTR("ANY"));
-
-   return displayStr;
-}
-
-
-static char * HumidityHighPIDTempCascadeStatePara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettingsRollover( operationType, paraValue, EA_RH_HIGH_PID_CASCADE_TEMP_STATE, D_RH_HIGH_PID_CASCADE_TEMP_STATE, MIN_RH_HIGH_PID_CASCADE_TEMP_STATE, MAX_RH_HIGH_PID_CASCADE_TEMP_STATE );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   if ((*paraValue) < 0 )
-      locked_sprintf_P( displayStr, PSTR("LOW"));
-   else if ((*paraValue) > 0 )
-      locked_sprintf_P( displayStr, PSTR("HI"));
-   else if ((*paraValue) == 0 )
-      locked_sprintf_P( displayStr, PSTR("ANY"));
-
-   return displayStr;
-}
-
-
-static char * HumidityLowPIDTempCascadeStatePara( uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettingsRollover( operationType, paraValue, EA_RH_LOW_PID_CASCADE_TEMP_STATE, D_RH_LOW_PID_CASCADE_TEMP_STATE, MIN_RH_LOW_PID_CASCADE_TEMP_STATE, MAX_RH_LOW_PID_CASCADE_TEMP_STATE );
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   if ((*paraValue) < 0 )
-      locked_sprintf_P( displayStr, PSTR("LOW"));
-   else if ((*paraValue) > 0 )
-      locked_sprintf_P( displayStr, PSTR("HI"));
-   else if ((*paraValue) == 0 )
-      locked_sprintf_P( displayStr, PSTR("ANY"));
-
-   return displayStr;
-}
-
-
-static char * SetOutPolarityPara( uint8_t operationType, int16_t * paraValue, unsigned int eepromAddr, int16_t dfltVal )
-{
-   ParameterOperationsSettingsRollover( operationType, paraValue, eepromAddr, dfltVal, 0, 1 );
-
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   if (IsLCDDisplay())
-   {
-      if( *paraValue )
-         locked_sprintf_P( displayStr, PSTR("NORMAL"));
-      else
-         locked_sprintf_P( displayStr, PSTR("REVERSE"));
-   }
-   return displayStr;
-   
-}
-
-
-static char * Output1MappingPara( uint8_t operationType, int16_t * paraValue )
-{
-   return OutputMappingPara1( operationType, paraValue, OUTPUT1_NORMAL, EA_OUTPUT1_MAPPING );
-}
-
-static char * Output2MappingPara( uint8_t operationType, int16_t * paraValue )
-{
-   return OutputMappingPara( operationType, paraValue, OUTPUT_INPUT2, EA_OUTPUT2_MAPPING );
-}
-
-static char * Output3MappingPara( uint8_t operationType, int16_t * paraValue )
-{
-   return OutputMappingPara( operationType, paraValue, OUTPUT_INPUT3, EA_OUTPUT3_MAPPING );
-}
-
-static char * Output4MappingPara( uint8_t operationType, int16_t * paraValue )
-{
-   return OutputMappingPara( operationType, paraValue, OUTPUT_INPUT4, EA_OUTPUT4_MAPPING );
-}
-
-
-static char * OutputMappingPara( uint8_t operationType, int16_t * paraValue, int16_t dfltVal, unsigned int eeAddress )
-{
-   ParameterOperationsSettingsRollover( operationType, paraValue, eeAddress, dfltVal, 0, OUTPUT_LAST_NO );
-
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY)
-      return NULL;
-   if (IsLCDDisplay())
-   {
-      switch( *paraValue )
-      {
-         case OUTPUT_COMPUTER: locked_sprintf_P( displayStr, PSTR("COMPUTER"));
-                               break;
-         case OUTPUT_INPUT1:   locked_sprintf_P( displayStr, PSTR("INPUT1"));
-                               break;
-         case OUTPUT_INPUT1REV:locked_sprintf_P( displayStr, PSTR("INPUT1REV"));
-                               break;
-         case OUTPUT_INPUT2:   locked_sprintf_P( displayStr, PSTR("INPUT2"));
-                               break;
-         case OUTPUT_INPUT2REV:locked_sprintf_P( displayStr, PSTR("INPUT2REV"));
-                               break;
-         case OUTPUT_INPUT3:   locked_sprintf_P( displayStr, PSTR("INPUT3"));
-                               break;
-         case OUTPUT_INPUT3REV:locked_sprintf_P( displayStr, PSTR("INPUT3REV"));
-                               break;
-         case OUTPUT_INPUT4:   locked_sprintf_P( displayStr, PSTR("INPUT4"));
-                               break;
-         case OUTPUT_INPUT4REV:locked_sprintf_P( displayStr, PSTR("INPUT4REV"));
-                               break;
-		 case OUTPUT_INPUT5:   locked_sprintf_P( displayStr, PSTR("INPUT5"));
-							   break;
-		 case OUTPUT_INPUT5REV:locked_sprintf_P( displayStr, PSTR("INPUT5REV"));
-							   break;
-		 //case OUTPUT_DOOR_INPUT:   locked_sprintf_P( displayStr, PSTR("DOOR OPEN"));
-							   //break;
-		 //case OUTPUT_DOOR_INPUT_REV:locked_sprintf_P( displayStr, PSTR("DOOR CLOSE"));
-							   //break;
-         default:              locked_sprintf_P( displayStr, PSTR("UNKOWN"));
-                               break;
-      }
-   }
-   return displayStr;
-}
-
-static char * OutputMappingPara1( uint8_t operationType, int16_t * paraValue, int16_t dfltVal, unsigned int eeAddress )
-{
-	ParameterOperationsSettingsRollover( operationType, paraValue, eeAddress, dfltVal, 0, OUTPUT1_LAST_NO );
-
-	if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY)
-	return NULL;
-	if (IsLCDDisplay())
-	{
-		switch( *paraValue )
-		{
-			case OUTPUT1_NORMAL: locked_sprintf_P( displayStr, PSTR("NORMAL"));
-			break;
-			case OUTPUT1_REVERSE:   locked_sprintf_P( displayStr, PSTR("REVERSE"));
-			break;
-			default:              locked_sprintf_P( displayStr, PSTR("UNKOWN"));
-			break;
-		}
-	}
-	return displayStr;
-}
-
-//static char * TempRHScanTimePara(uint8_t operationType, int16_t * paraValue )
-//{
-   //return ParaSetIntegerVal( operationType, paraValue, EA_TEMP_RH_SCAN_TIME, 5, 1, 30 );
-//}
-//
-//
-//static char * TempRHAverageCntPara(uint8_t operationType, int16_t * paraValue )
-//{
-   //return ParaSetIntegerVal( operationType, paraValue, EA_TEMP_RH_READING_AVERAGE, 10, 1, 20 );
-//}
-//
-//
-//static char * PresAverageCntPara(uint8_t operationType, int16_t * paraValue )
-//{
-   //return ParaSetIntegerVal( operationType, paraValue, EA_PRES_READING_AVERAGE, 5, 1, 30 );
-//}
-
- 
 static void ParameterOperationsSettings( uint8_t operationType, int16_t * paraValue, unsigned int eepromAddr, int16_t dfltVal, int16_t minVal, int16_t maxVal )
 {
    if(( operationType == (uint8_t)PARA_READ_VALUE_ONLY ) || ( operationType == (uint8_t)PARA_READ ))
@@ -5301,26 +3232,6 @@ static void ParameterOperationsSettingsRollover( uint8_t operationType, int16_t 
 		////OSWriteEEPromWord((unsigned int *)eepromAddr, *paraValue);
 	//}
 //}
-
-static char * ParaOutputType( unsigned int eepromAddr, uint8_t operationType, int16_t * paraValue )
-{
-   ParameterOperationsSettingsRollover( operationType, paraValue, eepromAddr, 1, 0, 2 );
-
-   if(operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_WRITE_VALUE_ONLY )
-      return NULL;
-   if (IsLCDDisplay())
-   {
-      if( *paraValue == 0 )
-         locked_sprintf_P( displayStr, PSTR("NONE"));
-      else if( *paraValue == 1 )
-         locked_sprintf_P( displayStr, PSTR("SENS"));
-      else if( *paraValue == 2 )
-         locked_sprintf_P( displayStr, PSTR("PID"));
-      else
-         locked_sprintf_P( displayStr, PSTR("Unknown"));
-   }
-   return displayStr;
-}
 
 
 static char * ParaSetIntegerVal(uint8_t operationType, int16_t * paraValue, unsigned int eepromAddr, int16_t dfltVal, int16_t minVal, int16_t maxVal )
@@ -5836,140 +3747,15 @@ int max_rh_out_high_rh()
    return 10000;
 }
 
-//static uint8_t IsPresEnabled()
-//{
-   //return IsDP1Enabled() || IsDP2Enabled()  || IsDP3Enabled();
-//}
-
-
-static uint8_t IsPresAbsOutEnabled()
-{
-    if( !IsDP1Enabled())
-       return FALSE;
-    if( ! IsPIDEnabled())
-       return TRUE;
-    return (GetParameterValue(DP1_OUTPUT_TYPE) == 1);
-}
-
-
-static uint8_t IsPresAbsPIDEnabled()
-{
-    if( !IsDP1Enabled())
-       return FALSE;
-    if( ! IsPIDEnabled())
-       return FALSE;
-    return (GetParameterValue(DP1_OUTPUT_TYPE) == 2);
-}
-
-
-static uint8_t IsPresDiffOutEnabled()
-{
-    if( !IsDP2Enabled())
-       return FALSE;
-    if( ! IsPIDEnabled())
-       return TRUE;
-    return (GetParameterValue(DP2_OUTPUT_TYPE) == 1);
-}
-
-static uint8_t IsPresDiffPIDEnabled()
-{
-    if( !IsDP2Enabled())
-       return FALSE;
-    if( ! IsPIDEnabled())
-       return FALSE;
-    return (GetParameterValue(DP2_OUTPUT_TYPE) == 2);
-}
-
-static uint8_t IsTempOutEnabled()
-{
-    if( !IsTemperatureEnabled())
-       return FALSE;
-    if( ! IsPIDEnabled())
-       return TRUE;
-    return (GetParameterValue(TEMP_OUTPUT_TYPE) == 1);
-}
-
-
-static uint8_t IsTempPIDEnabled()
-{
-    if( !IsTemperatureEnabled())
-       return FALSE;
-    if( ! IsPIDEnabled())
-       return FALSE;
-    return (GetParameterValue(TEMP_OUTPUT_TYPE) == 2);
-}
-
-static uint8_t IsRHOutEnabled()
-{
-    if( !IsHumidityEnabled())
-       return FALSE;
-    if( ! IsPIDEnabled())
-       return TRUE;
-    return (GetParameterValue(RH_OUTPUT_TYPE) == 1);
-}
-
-
-static uint8_t IsRHPIDEnabled()
-{
-    if( !IsHumidityEnabled())
-       return FALSE;
-    if( ! IsPIDEnabled())
-       return FALSE;
-    return (GetParameterValue(RH_OUTPUT_TYPE) == 2);
-}
-
-
-static uint8_t IsTempRHPIDEnabled()
-{
-    return IsRHPIDEnabled() && IsTempPIDEnabled();
-}
-
-
-static uint8_t IsPresAbsOutActive()
-{
-    return IsPresAbsOutEnabled() || IsPresAbsPIDEnabled();
-}
-
-
-static uint8_t IsPresDiffOutActive()
-{
-    return IsPresDiffOutEnabled() || IsPresDiffPIDEnabled();
-}
-
-static uint8_t IsTempOutActive()
-{
-    return IsTempOutEnabled() || IsTempPIDEnabled();
-}
-
-static uint8_t IsRHOutActive()
-{
-    return IsRHOutEnabled() || IsRHPIDEnabled();
-}
-
 
 static uint8_t IsTempOrRHEnabled()
 {
     return(IsTemperatureEnabled() || IsHumidityEnabled());
 }
 
-//static uint8_t IsParticalAlarmEnabled()
-//{
-	//return IsAlarmEnabled() && GetParameterValue(PARTICAL_ALARM_SETUP) != ALARM_DISABLED;
-//}
-
 static uint8_t IsPresAbsAlarmEnabled()
 {
    return IsAlarmEnabled() && GetParameterValue(DP1_ALARM_SETUP) != ALARM_DISABLED;
-}
-
-static uint8_t IsPresDiffAlarmEnabled()
-{
-   return IsAlarmEnabled() && GetParameterValue(DP2_ALARM_SETUP) != ALARM_DISABLED;
-}
-
-static uint8_t IsPresDiff3AlarmEnabled()
-{
-	return IsAlarmEnabled() && GetParameterValue(DP3_ALARM_SETUP) != ALARM_DISABLED;
 }
 
 static uint8_t IsTempAlarmEnabled()

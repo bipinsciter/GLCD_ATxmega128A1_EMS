@@ -8,7 +8,6 @@
 #include "SerialInterface.h"
 #include "DeviceIO.h"
 #include "eepromAdr.h"
-#include "pid.h"
 
 static int serialTime,serialPort, loggingTime;
 static int buzzerSpan, buzzerOnTime, buzzerTimeCounter, buzzerDisableTime, oldBuzzVal, currBuzzVal;
@@ -157,13 +156,6 @@ void PERIODIC_FUNC_NAME( void )
 	}
 	
 	buzzerTimeCounter = (buzzerTimeCounter + 1) % buzzerSpan;
-
-	if( IsAlalogOutEnabled() && IsPIDEnabled())
-	{
-		PIDLoopControl();
-	}
-	  
-	//OSSleep( 1000 );
 }
 
 void SuppressBuzzer()

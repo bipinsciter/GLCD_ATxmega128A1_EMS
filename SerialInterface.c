@@ -14,7 +14,6 @@
 #include "rtc.h"
 #include "error.h"
 #include "eepromAdr.h"
-#include "pid.h"
 
 #ifdef OS_AVRX
 #include "AvrXserialIO.h"
@@ -447,34 +446,7 @@ void SerialInterfaceTask( void )
 				    SendPacket(Ind, READ_DP1_VALUE, txDataBuffer, 1);
 				}
 			 	break;
-		    case READ_DP2_VALUE:
-				if (IsDP2Enabled())
-				{
-					GetPareValue(DP2_VAL_INDEX, &senVal);
-				    txDataBuffer[0] = senVal.errorCode;
-				    locked_sprintf_P( txDataBuffer+1, PSTR("%d"), senVal.convertedValue );
-					SendPacket(Ind, READ_DP2_VALUE, txDataBuffer, strlen(txDataBuffer+1)+1);
-				}
-				else
-				{
-				    txDataBuffer[0] = ERROR_CMD_INVALID;
-				    SendPacket(Ind, READ_DP2_VALUE, txDataBuffer, 1);
-				}
-			 	break;
-			case READ_DP3_VALUE:
-				if (IsDP3Enabled())
-				{
-					GetPareValue(DP3_VAL_INDEX, &senVal);
-					txDataBuffer[0] = senVal.errorCode;
-					locked_sprintf_P( txDataBuffer+1, PSTR("%d"), senVal.convertedValue );
-					SendPacket(Ind, READ_DP3_VALUE, txDataBuffer, strlen(txDataBuffer+1)+1);
-				}
-				else
-				{
-					txDataBuffer[0] = ERROR_CMD_INVALID;
-					SendPacket(Ind, READ_DP3_VALUE, txDataBuffer, 1);
-				}
-				break;
+		   
 		    case READ_TEMP_VALUE:
 				if (IsTemperatureEnabled())
 				{
@@ -519,22 +491,6 @@ void SerialInterfaceTask( void )
 				tempshort >>= 2;
 				txDataBuffer[4] = tempshort & 0x3;
                 SendPacket(Ind, READ_ALARMS, txDataBuffer, 5 );
-				break;
-
-            case READ_PID_PER_VALUES:
-			    paraValue = GetAbsPresPIDPercent();
-			    txDataBuffer[0] = ((char *)&paraValue)[0];
-			    txDataBuffer[1] = ((char *)&paraValue)[1];					
-				paraValue = GetDiffPresPIDPercent();
-			    txDataBuffer[2] = ((char *)&paraValue)[0];
-			    txDataBuffer[3] = ((char *)&paraValue)[1];					
-                paraValue = GetTempPIDPercent();
-			    txDataBuffer[4] = ((char *)&paraValue)[0];
-			    txDataBuffer[5] = ((char *)&paraValue)[1];					
-                paraValue = GetRHPIDPercent();
-			    txDataBuffer[6] = ((char *)&paraValue)[0];
-			    txDataBuffer[7] = ((char *)&paraValue)[1];					
-                SendPacket(Ind, READ_PID_PER_VALUES, txDataBuffer, 8 );
 				break;
 
 		    case READ_INPUT:
@@ -892,20 +848,6 @@ void SerialBroadcast(uint8_t port)
 		 locked_sprintf_P( txDataBuffer+1, PSTR("%d"), senVal.convertedValue );
          SendPacket(Ind, DP1_BRDCAST, txDataBuffer, strlen(txDataBuffer+1)+1);
       }
-      if (IsDP2Enabled())
-      {
-         GetPareValue(DP2_VAL_INDEX, &senVal);
-         txDataBuffer[0] = senVal.errorCode;
-		 locked_sprintf_P( txDataBuffer+1, PSTR("%d"), senVal.convertedValue );
-         SendPacket(Ind, DP2_BRDCAST, txDataBuffer, strlen(txDataBuffer+1)+1 );
-      }
-	  if (IsDP3Enabled())
-	  {
-		  GetPareValue(DP3_VAL_INDEX, &senVal);
-		  txDataBuffer[0] = senVal.errorCode;
-		  locked_sprintf_P( txDataBuffer+1, PSTR("%d"), senVal.convertedValue );
-		  SendPacket(Ind, DP3_BRDCAST, txDataBuffer, strlen(txDataBuffer+1)+1 );
-	  }
       if (IsTemperatureEnabled())
       {
          GetPareValue(TEMPERATURE_VAL_INDEX, &senVal);
@@ -944,16 +886,6 @@ void SerialPrinter()
          GetPareValue(DP1_VAL_INDEX, &senVal);//GetDP1( &senVal );
          SerialPrint( FormatDP1OneLine( txDataBuffer, senVal.errorCode, senVal.convertedValue ));
       }
-      if (IsDP2Enabled())
-      {
-         GetPareValue(DP2_VAL_INDEX, &senVal);//GetDP2( &senVal );
-         SerialPrint( FormatDP2OneLine( txDataBuffer, senVal.errorCode, senVal.convertedValue ));
-      }
-	  if (IsDP3Enabled())
-	  {
-		  GetPareValue(DP3_VAL_INDEX, &senVal);//GetDP3( &senVal );
-		  SerialPrint( FormatDP3OneLine( txDataBuffer, senVal.errorCode, senVal.convertedValue ));
-	  }
       if (IsTemperatureEnabled())
       {
          GetPareValue(TEMPERATURE_VAL_INDEX, &senVal);//GetTemperature( &senVal );
@@ -1206,36 +1138,10 @@ static int MakeAllRuntimeParaXmitSrting()
 	}
 	txDataBuffer[i++] = SERIAL_RESP_SEP;
 
-   if (IsDP2Enabled())
-   {
-      GetPareValue(DP2_VAL_INDEX, &senVal);//GetDP2( &senVal );
-      txDataBuffer[i++] = senVal.errorCode;
-	   if( senVal.errorCode == 0 )
-	   {
-         locked_sprintf_P( &txDataBuffer[i], PSTR("%d"), senVal.convertedValue );
-		 i += strlen(&txDataBuffer[i]);
-	   }
-   }
-	else
-	{
-       txDataBuffer[i++] = ERROR_CMD_INVALID;
-	}
+	txDataBuffer[i++] = ERROR_CMD_INVALID;
 	txDataBuffer[i++] = SERIAL_RESP_SEP;
 
-	if (IsDP3Enabled())
-	{
-		GetPareValue(DP3_VAL_INDEX, &senVal);//GetDP3( &senVal );
-		txDataBuffer[i++] = senVal.errorCode;
-		if( senVal.errorCode == 0 )
-		{
-			locked_sprintf_P( &txDataBuffer[i], PSTR("%d"), senVal.convertedValue );
-			i += strlen(&txDataBuffer[i]);
-		}
-	}
-	else
-	{
-		txDataBuffer[i++] = ERROR_CMD_INVALID;
-	}
+	txDataBuffer[i++] = ERROR_CMD_INVALID;
 	txDataBuffer[i++] = SERIAL_RESP_SEP;
 
     if (IsTemperatureEnabled())
@@ -1254,20 +1160,7 @@ static int MakeAllRuntimeParaXmitSrting()
 	}
 	txDataBuffer[i++] = SERIAL_RESP_SEP;
 	
-	if (IsTemperature2Enabled())
-	{
-		GetPareValue(TEMPERATURE2_VAL_INDEX, &senVal);
-		txDataBuffer[i++] = senVal.errorCode;
-		if( senVal.errorCode == 0 )
-		{
-			locked_sprintf_P( &txDataBuffer[i], PSTR("%d"), senVal.convertedValue );
-			i += strlen(&txDataBuffer[i]);
-		}
-	}
-	else
-	{
-		txDataBuffer[i++] = ERROR_CMD_INVALID;
-	}
+	txDataBuffer[i++] = ERROR_CMD_INVALID;
 	txDataBuffer[i++] = SERIAL_RESP_SEP;
 
     if (IsHumidityEnabled())
@@ -1286,67 +1179,8 @@ static int MakeAllRuntimeParaXmitSrting()
 	}
 	txDataBuffer[i++] = SERIAL_RESP_SEP;
 	
-	 if (IsTemperature2Enabled())
-	 {
-		 GetPareValue(HUMIDITY2_VAL_INDEX, &senVal);
-		 txDataBuffer[i++] = senVal.errorCode;
-		 if( senVal.errorCode == 0 )
-		 {
-			 locked_sprintf_P( &txDataBuffer[i], PSTR("%d"), senVal.convertedValue );
-			 i += strlen(&txDataBuffer[i]);
-		 }
-	 }
-	 else
-	 {
-		 txDataBuffer[i++] = ERROR_CMD_INVALID;
-	 }
-	 txDataBuffer[i++] = SERIAL_RESP_SEP;
-	 
-	//if (IsTemperatureEnabled() && IsHumidityEnabled())
-	//{
-		//txDataBuffer[i++] = PreTdErr;
-		//if( PreTdErr == 0 )
-		//{
-			//locked_sprintf_P( &txDataBuffer[i], PSTR("%d"), PreTd );
-			//i += strlen(&txDataBuffer[i]);
-		//}
-	//}
-	//else
-	//{
-		//txDataBuffer[i++] = ERROR_CMD_INVALID;
-	//}
-	//txDataBuffer[i++] = SERIAL_RESP_SEP;
-	
-	//if (IsTemperature2Enabled())
-	//{
-		//txDataBuffer[i++] = PostTdErr;
-		//if( PostTdErr == 0 )
-		//{
-			//locked_sprintf_P( &txDataBuffer[i], PSTR("%d"), PostTd );
-			//i += strlen(&txDataBuffer[i]);
-		//}
-	//}
-	//else
-	//{
-		//txDataBuffer[i++] = ERROR_CMD_INVALID;
-	//}
-	//txDataBuffer[i++] = SERIAL_RESP_SEP;
-	
-	//if (IsTemperatureEnabled() && IsHumidityEnabled() && IsTemperature2Enabled())
-	//{
-		//txDataBuffer[i++] = TDdiffErr;
-		//if( TDdiffErr == 0 )
-		//{
-			//locked_sprintf_P( &txDataBuffer[i], PSTR("%d"), TDdiff );
-			//i += strlen(&txDataBuffer[i]);
-		//}
-	//}
-	//else
-	//{
-		//txDataBuffer[i++] = ERROR_CMD_INVALID;
-	//}
-	//txDataBuffer[i++] = SERIAL_RESP_SEP;
-	
+	txDataBuffer[i++] = ERROR_CMD_INVALID;
+	txDataBuffer[i++] = SERIAL_RESP_SEP;
 	 
    txDataBuffer[i++] = GetSystemError();
    txDataBuffer[i++] = SERIAL_RESP_SEP;
@@ -1364,18 +1198,14 @@ static int MakeAllRuntimeParaXmitSrting()
    txDataBuffer[i++] = tempshort & 0x3;
    txDataBuffer[i++] = SERIAL_RESP_SEP;
 
-   paraValue = GetAbsPresPIDPercent();
-   txDataBuffer[i++] = ((char *)&paraValue)[0];
-   txDataBuffer[i++] = ((char *)&paraValue)[1];					
-   paraValue = GetDiffPresPIDPercent();
-   txDataBuffer[i++] = ((char *)&paraValue)[0];
-   txDataBuffer[i++] = ((char *)&paraValue)[1];					
-   paraValue = GetTempPIDPercent();
-   txDataBuffer[i++] = ((char *)&paraValue)[0];
-   txDataBuffer[i++] = ((char *)&paraValue)[1];					
-   paraValue = GetRHPIDPercent();
-   txDataBuffer[i++] = ((char *)&paraValue)[0];
-   txDataBuffer[i++] = ((char *)&paraValue)[1];					
+   txDataBuffer[i++] = 0;
+   txDataBuffer[i++] = 0;
+   txDataBuffer[i++] = 0;
+   txDataBuffer[i++] = 0;					
+   txDataBuffer[i++] = 0;
+   txDataBuffer[i++] = 0;
+   txDataBuffer[i++] = 0;
+   txDataBuffer[i++] = 0;					
    txDataBuffer[i++] = SERIAL_RESP_SEP;
    
    GetInput( (uint8_t *)&txDataBuffer[i++] );		// Input 

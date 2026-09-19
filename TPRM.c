@@ -476,7 +476,7 @@ int main(void)                 // Main runs under the AvrX Stack
 	SW_I2C1InterfaceInit();	//PORTC	=> DAC/Display
 	SW_I2C2InterfaceInit();	//PORTD => TempRH/DP1/RTC
 	SW_I2C3InterfaceInit();	//PORTE	=> DP3/PostTemp
-	SW_I2C4InterfaceInit();	//PORTF => DP2/ParticalSensor
+	SW_I2C4InterfaceInit();	//PORTF => DP2
    
 	InitRTC();
 	SetDefault();

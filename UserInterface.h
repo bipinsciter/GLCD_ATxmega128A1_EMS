@@ -259,19 +259,11 @@ enum stopbits
 #define PRES_SENS_NONE        0
 #define PRES_SENS_SM9543      1
 #define PRES_SENS_XGZP6891D   2
+#define PRES_SENS_WF200DP     3
+
 
 #define PRES_AREA_SQUARE      0
 #define PRES_AREA_ROUND       1
-
-#define PARTICAL_SENS_NONE       0
-#define PARTICAL_SENS_SEN55      1
-#define PARTICAL_SENS_ISP7100    2
-#define PARTICAL_SENS_ISP5100    3
-
-#define PARTICAL_SIZE_1_0		0
-#define PARTICAL_SIZE_2_5		1
-#define PARTICAL_SIZE_4_0		2
-#define PARTICAL_SIZE_10_0		3
 
 #define ALARM_DISABLED 0
 #define ALARM_ENB_BUZ_OFF  1
@@ -377,19 +369,15 @@ void UIResourceUnlock();
 void BuzzerOn();
 void BuzzerOff();
 
+void DisplayRTC(void);
 void DisplaySystemError();
 char DisplayDP1(uint8_t error, int16_t value);
-char DisplayDP2(uint8_t error, int16_t value);
-char DisplayDP3(uint8_t error, int16_t value);
 char DisplayTemperature(uint8_t error, int16_t value);
-char DisplayTemperature2(uint8_t error, int16_t value);
 char DisplayHumidity(uint8_t error, int16_t value);
 
 char * FormatSystemError( char * str, int16_t value);
 
 char * FormatDP1OneLine( char * str, uint8_t error, int16_t value );
-char * FormatDP2OneLine( char * str, uint8_t error, int16_t value );
-char * FormatDP3OneLine( char * str, uint8_t error, int16_t value );
 char * FormatTemperatureOneLine( char * str, uint8_t error, int16_t value, uint8_t decimal );
 char * FormatHumidityOneLine( char * str, uint8_t error, int16_t value, uint8_t decimal );
 

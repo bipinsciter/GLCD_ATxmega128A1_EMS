@@ -144,7 +144,7 @@
     </ToolchainSettings>
     <BuildTarget>all</BuildTarget>
     <CleanTarget>clean</CleanTarget>
-    <OutputFileName>TPRM_V3_0_0_BareMetal_NewFont</OutputFileName>
+    <OutputFileName>TPRM_V3_0_1_BareMetal_NewFont</OutputFileName>
     <OutputFileExtension>.elf</OutputFileExtension>
     <OutputType>Executable</OutputType>
   </PropertyGroup>
@@ -300,18 +300,6 @@
     <Compile Include="error.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="ParticalSensor\ParticalSenser_IPS7100.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="ParticalSensor\ParticalSenser_IPS7100.h">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="ParticalSensor\ParticalSenser_SEN55.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="ParticalSensor\ParticalSenser_SEN55.h">
-      <SubType>compile</SubType>
-    </Compile>
     <Compile Include="Pressure\PressureSens.c">
       <SubType>compile</SubType>
     </Compile>
@@ -402,12 +390,8 @@
     <Compile Include="locked_printf.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="PID.c">
-      <SubType>compile</SubType>
-    </Compile>
     <Folder Include="DAC7573" />
     <Folder Include="FreeRTOS" />
-    <Folder Include="ParticalSensor\" />
     <Folder Include="RTC" />
     <Folder Include="Pressure" />
     <Folder Include="TempRH" />
