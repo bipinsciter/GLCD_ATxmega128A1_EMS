@@ -47,7 +47,7 @@
 #include "eepromAdr.h" 
 #include "rtc.h" 
 
-#define SOFTWARE_VERSION        301
+#define SOFTWARE_VERSION        303
 
 #define EEPROM_WRITE_TIMEOUT	30
 
@@ -666,6 +666,7 @@ static uint8_t IsConfigPassword();
 static uint8_t NotConfigPassword();
 
 static uint8_t IsTempOrRHEnabled();
+static uint8_t IsTempAndRHEnabled();
 static uint8_t IsPresAbsAlarmEnabled();
 static uint8_t IsTempAlarmEnabled();
 static uint8_t IsHumidityAlarmEnabled();
@@ -887,8 +888,8 @@ void StartDisplaySensorValues(void)
 
 void DisplaySensorValues(void)
 {
-	uint8_t errorCode;
-	int value1=0;
+	//uint8_t errorCode;
+	//int value1=0;
 	//int PreRHvalue=0,PreTempvalue=0;
 
 	if (IsLCDDisplay())
@@ -990,48 +991,62 @@ void DisplaySensorValues(void)
 		sprintf(displayStr1,"%s  ",(CurrentDoorStatus()==OPEN)?"OPEN":"CLOSE");
 		PrintLineInBox(LEFT,90,140,144,displayStr1);
 		//---------------------------------------------------------------------
-		GetPareValue(DP1_VAL_INDEX, &senVal);
-		if( abs(senVal.convertedValue) < GetParameterValue( DP1_ZERO_RNG ))
-		senVal.convertedValue = 0;
-		
-		if( abs(senVal.convertedValue) < 5000)
-		senVal.convertedValue += GetParameterValue( DP_RANGE1_ADJ );
-		else if( abs(senVal.convertedValue) < 10000)
-		senVal.convertedValue += GetParameterValue( DP_RANGE2_ADJ );
-		else if( abs(senVal.convertedValue) < 15000)
-		senVal.convertedValue += GetParameterValue( DP_RANGE3_ADJ );
-		else if( abs(senVal.convertedValue) < 20000)
-		senVal.convertedValue += GetParameterValue( DP_RANGE4_ADJ );
-		else if( abs(senVal.convertedValue) < 25000)
-		senVal.convertedValue += GetParameterValue( DP_RANGE5_ADJ );
-		else if( abs(senVal.convertedValue) < 30000)
-		senVal.convertedValue += GetParameterValue( DP_RANGE6_ADJ );
-		
-		DisplayDP1(senVal.errorCode, senVal.convertedValue);
-		//---------------------------------------------------------------------
-		if(IsTempOrRHEnabled())
+		if(IsDP1Enabled() && !IsTempAndRHEnabled())
 		{
-			
+			GetPareValue(DP1_VAL_INDEX, &senVal);
+			if( abs(senVal.convertedValue) < GetParameterValue( DP1_ZERO_RNG ))
+			senVal.convertedValue = 0;
+		
+			if( abs(senVal.convertedValue) < 5000)
+			senVal.convertedValue += GetParameterValue( DP_RANGE1_ADJ );
+			else if( abs(senVal.convertedValue) < 10000)
+			senVal.convertedValue += GetParameterValue( DP_RANGE2_ADJ );
+			else if( abs(senVal.convertedValue) < 15000)
+			senVal.convertedValue += GetParameterValue( DP_RANGE3_ADJ );
+			else if( abs(senVal.convertedValue) < 20000)
+			senVal.convertedValue += GetParameterValue( DP_RANGE4_ADJ );
+			else if( abs(senVal.convertedValue) < 25000)
+			senVal.convertedValue += GetParameterValue( DP_RANGE5_ADJ );
+			else if( abs(senVal.convertedValue) < 30000)
+			senVal.convertedValue += GetParameterValue( DP_RANGE6_ADJ );
+		
+			DisplayDP1Only(senVal.errorCode, senVal.convertedValue);
+		}
+		else if(!IsDP1Enabled() && IsTempAndRHEnabled())
+		{
 			//---------------------------------------------------------------------
 			GetPareValue(HUMIDITY_VAL_INDEX, &senVal);
-			//if(senVal.errorCode == ERROR_OK) PreRHvalue = senVal.convertedValue;
-		
-			value1 = senVal.convertedValue;
-			errorCode = senVal.errorCode;
-		
-			DisplayHumidity(errorCode, value1);
+			DisplayHumidityWithNoDP(senVal.errorCode, senVal.convertedValue);
 			//---------------------------------------------------------------------
 			GetPareValue(TEMPERATURE_VAL_INDEX, &senVal);
-			//if(senVal.errorCode == ERROR_OK) PreTempvalue = senVal.convertedValue;
-		
-			value1 = senVal.convertedValue;
-			errorCode = senVal.errorCode;
-
-			DisplayTemperature(errorCode, value1);
+			DisplayTemperatureWithNoDP(senVal.errorCode, senVal.convertedValue);
 		}
 		else
 		{
+			GetPareValue(DP1_VAL_INDEX, &senVal);
+			if( abs(senVal.convertedValue) < GetParameterValue( DP1_ZERO_RNG ))
+			senVal.convertedValue = 0;
 			
+			if( abs(senVal.convertedValue) < 5000)
+			senVal.convertedValue += GetParameterValue( DP_RANGE1_ADJ );
+			else if( abs(senVal.convertedValue) < 10000)
+			senVal.convertedValue += GetParameterValue( DP_RANGE2_ADJ );
+			else if( abs(senVal.convertedValue) < 15000)
+			senVal.convertedValue += GetParameterValue( DP_RANGE3_ADJ );
+			else if( abs(senVal.convertedValue) < 20000)
+			senVal.convertedValue += GetParameterValue( DP_RANGE4_ADJ );
+			else if( abs(senVal.convertedValue) < 25000)
+			senVal.convertedValue += GetParameterValue( DP_RANGE5_ADJ );
+			else if( abs(senVal.convertedValue) < 30000)
+			senVal.convertedValue += GetParameterValue( DP_RANGE6_ADJ );
+			
+			DisplayDP1(senVal.errorCode, senVal.convertedValue);
+			//---------------------------------------------------------------------
+			GetPareValue(HUMIDITY_VAL_INDEX, &senVal);
+			DisplayHumidity(senVal.errorCode, senVal.convertedValue);
+			//---------------------------------------------------------------------
+			GetPareValue(TEMPERATURE_VAL_INDEX, &senVal);
+			DisplayTemperature(senVal.errorCode, senVal.convertedValue);
 		}
 		//---------------------------------------------------------------------
 		if(IsRTCEnabled())
@@ -1294,15 +1309,9 @@ void DisplayRTC(void)
 char DisplayDP1(uint8_t error, int16_t value)
 {
 	char noSystemErrDisp = 0;
-	uint16_t lu16_offset=0;
-	
-	if(IsTempOrRHEnabled()) lu16_offset=0;
-	else lu16_offset=60;
-	
+
 	if (IsLCDDisplay())
 	{
-		//OSSemaTakeEver(UIMutex);
-		
 		FormatDP(GetParameterValue( DP1_UNIT ), value, GetParameterValue(DP1_RANGE), GetParameterValue(DP1_AREA_TYPE), GetParameterValue(DP1_AREA_LENGTH), GetParameterValue(DP1_AREA_WIDTH), GetParameterValue(DP1_AREA_RADIOUS));
 		formatedValue[strlen(formatedValue)-1] = '\0';  // one digit less resolution then setup
 		if(formatedValue[strlen(formatedValue)-1] == '.' )
@@ -1313,16 +1322,12 @@ char DisplayDP1(uint8_t error, int16_t value)
 		}
 
 		locked_sprintf_P( displayStr, PSTR("DP  (%S)"), formatedUnit);
-
 		ks0xxx_SelectFont(ARIAL18BOLD, ks0xxx_ReadFontData, BLACK);
-		PrintLineInBox(LEFT,25+lu16_offset,70,0,displayStr);
+		PrintLineInBox(LEFT,25,70,0,displayStr);
 		
 		locked_sprintf_P( displayStr, PSTR("%s"), formatedValue );
-		
 		ks0xxx_SelectFont( Bodoni89, ks0xxx_ReadFontData, BLACK);
-		PrintLineInBox(LEFT,25+lu16_offset,150,16,displayStr);
-		
-		ks0xxx_SelectFont( Bodoni15, ks0xxx_ReadFontData, BLACK);
+		PrintLineInBox(LEFT,25,150,16,displayStr);
 		
 		uint8_t length = 0;
 		memset(displayStr1,0,sizeof(displayStr1));
@@ -1338,14 +1343,10 @@ char DisplayDP1(uint8_t error, int16_t value)
 		formatedValue[strlen(formatedValue)-1] = '\0';  // one digit less resolution then setup
 		if(formatedValue[strlen(formatedValue)-1] == '.' )
 		formatedValue[strlen(formatedValue)-1] = '\0';  // if last digit '.' remove it
-		
 		sprintf(&displayStr1[length],"H%s",formatedValue);
 		
-		
-		
-		PrintLineInBox(LEFT,25+lu16_offset,135,90,displayStr1);
-		
-		//OSSemaGive(UIMutex);
+		ks0xxx_SelectFont( Bodoni15, ks0xxx_ReadFontData, BLACK);
+		PrintLineInBox(LEFT,25,135,90,displayStr1);
 	}
 	return noSystemErrDisp;
 }
@@ -1353,11 +1354,9 @@ char DisplayDP1(uint8_t error, int16_t value)
 char DisplayTemperature(uint8_t error, int16_t value)
 {
 	char noSystemErrDisp = 0;
-	
+
 	if (IsLCDDisplay())
 	{
-		//OSSemaTakeEver(UIMutex);
-
 		FormatTemperature( value, 1 );
 		if( error != ERROR_OK )
 		{
@@ -1365,15 +1364,12 @@ char DisplayTemperature(uint8_t error, int16_t value)
 		}
 		
 		locked_sprintf_P( displayStr, PSTR("TEMP  (%S)"), formatedUnit);
-
 		ks0xxx_SelectFont(ARIAL18BOLD, ks0xxx_ReadFontData, BLACK);
 		PrintLineInBox(LEFT,150,GLCD_PIXEL_X-1,0,displayStr);
-      
-		locked_sprintf_P( displayStr, PSTR("%s"), formatedValue );
-		ks0xxx_SelectFont(Bodoni50, ks0xxx_ReadFontData, BLACK);
-		PrintLineInBox(LEFT,150,GLCD_PIXEL_X-1,25,displayStr);
 		
-		ks0xxx_SelectFont(Bodoni15, ks0xxx_ReadFontData, BLACK);
+		locked_sprintf_P( displayStr, PSTR("%s"), formatedValue );
+		ks0xxx_SelectFont(Bodoni50, ks0xxx_ReadFontData, BLACK);	
+		PrintLineInBox(LEFT,150,GLCD_PIXEL_X-1,25,displayStr);
 		
 		uint8_t length = 0;
 		memset(displayStr1,0,sizeof(displayStr1));
@@ -1384,9 +1380,8 @@ char DisplayTemperature(uint8_t error, int16_t value)
 		FormatTemperature (GetParameterValue( TEMP_UPPER_ALARM_ON_LIMIT ),1);
 		sprintf(&displayStr1[length],"H%s",formatedValue);
 		
+		ks0xxx_SelectFont(Bodoni15, ks0xxx_ReadFontData, BLACK);
 		PrintLineInBox(LEFT,150,GLCD_PIXEL_X-1,70,displayStr1);
-	  
-		//OSSemaGive(UIMutex);
 	}
 	return noSystemErrDisp;
 }
@@ -1397,24 +1392,19 @@ char DisplayHumidity(uint8_t error, int16_t value)
 	
 	if (IsLCDDisplay())
 	{
-		//OSSemaTakeEver(UIMutex);
-		
 		FormatHumidity( value, 1 );
 		if( error != ERROR_OK )
 		{
 			FormatError( error );
 		}
 		
-		locked_sprintf_P( displayStr, PSTR("RH    (%S)"), formatedUnit);
-			
+		locked_sprintf_P( displayStr, PSTR("RH   (%S)"), formatedUnit);
 		ks0xxx_SelectFont(ARIAL18BOLD, ks0xxx_ReadFontData, BLACK);
 		PrintLineInBox(LEFT,150,GLCD_PIXEL_X-1,80,displayStr);
 
 		locked_sprintf_P( displayStr, PSTR("%s"), formatedValue );
 		ks0xxx_SelectFont(Bodoni50, ks0xxx_ReadFontData, BLACK);
 		PrintLineInBox(LEFT,150,GLCD_PIXEL_X-1,105,displayStr);
-		
-		ks0xxx_SelectFont(Bodoni15, ks0xxx_ReadFontData, BLACK);
 		
 		uint8_t length = 0;
 		memset(displayStr1,0,sizeof(displayStr1));
@@ -1425,9 +1415,123 @@ char DisplayHumidity(uint8_t error, int16_t value)
 		FormatHumidity (GetParameterValue( RH_UPPER_ALARM_ON_LIMIT ),1);
 		sprintf(&displayStr1[length],"H%s",formatedValue);
 		
+		ks0xxx_SelectFont(Bodoni15, ks0xxx_ReadFontData, BLACK);
 		PrintLineInBox(LEFT,150,GLCD_PIXEL_X-1,150,displayStr1);
+	}
+	return noSystemErrDisp;
+}
+
+char DisplayDP1Only(uint8_t error, int16_t value)
+{
+	char noSystemErrDisp = 0;
+	
+	if (IsLCDDisplay())
+	{
+		FormatDP(GetParameterValue( DP1_UNIT ), value, GetParameterValue(DP1_RANGE), GetParameterValue(DP1_AREA_TYPE), GetParameterValue(DP1_AREA_LENGTH), GetParameterValue(DP1_AREA_WIDTH), GetParameterValue(DP1_AREA_RADIOUS));
+		formatedValue[strlen(formatedValue)-1] = '\0';  // one digit less resolution then setup
+		if(formatedValue[strlen(formatedValue)-1] == '.' )
+		formatedValue[strlen(formatedValue)-1] = '\0';  // if last digit '.' remove it
+		if( error != ERROR_OK )
+		{
+			FormatError( error );
+		}
+
+		locked_sprintf_P( displayStr, PSTR("DP  (%S)"), formatedUnit);
+		ks0xxx_SelectFont(ARIAL18BOLD, ks0xxx_ReadFontData, BLACK);
+		PrintLineInBox(LEFT,90,GLCD_PIXEL_X-1,0,displayStr);
 		
-		//OSSemaGive(UIMutex);
+		locked_sprintf_P( displayStr, PSTR("%s"), formatedValue );
+		ks0xxx_SelectFont( Bodoni89, ks0xxx_ReadFontData, BLACK);
+		PrintLineInBox(LEFT,85,GLCD_PIXEL_X-1,16,displayStr);
+		
+		uint8_t length = 0;
+		memset(displayStr1,0,sizeof(displayStr1));
+		
+		FormatDP(GetParameterValue( DP1_UNIT ), GetParameterValue( DP1_LOWER_ALARM_ON_LIMIT ), GetParameterValue(DP1_RANGE), GetParameterValue(DP1_AREA_TYPE), GetParameterValue(DP1_AREA_LENGTH), GetParameterValue(DP1_AREA_WIDTH), GetParameterValue(DP1_AREA_RADIOUS));
+		formatedValue[strlen(formatedValue)-1] = '\0';  // one digit less resolution then setup
+		if(formatedValue[strlen(formatedValue)-1] == '.' )
+		formatedValue[strlen(formatedValue)-1] = '\0';  // if last digit '.' remove it
+		sprintf(displayStr1,"L%s     ",formatedValue);
+		
+		length = strlen(displayStr1);
+		FormatDP(GetParameterValue( DP1_UNIT ), GetParameterValue( DP1_UPPER_ALARM_ON_LIMIT ), GetParameterValue(DP1_RANGE), GetParameterValue(DP1_AREA_TYPE), GetParameterValue(DP1_AREA_LENGTH), GetParameterValue(DP1_AREA_WIDTH), GetParameterValue(DP1_AREA_RADIOUS));
+		formatedValue[strlen(formatedValue)-1] = '\0';  // one digit less resolution then setup
+		if(formatedValue[strlen(formatedValue)-1] == '.' )
+		formatedValue[strlen(formatedValue)-1] = '\0';  // if last digit '.' remove it
+		sprintf(&displayStr1[length],"H%s",formatedValue);
+		
+		ks0xxx_SelectFont( Bodoni15, ks0xxx_ReadFontData, BLACK);
+		PrintLineInBox(LEFT,95,GLCD_PIXEL_X-1,90,displayStr1);
+	}
+	return noSystemErrDisp;
+}
+
+char DisplayTemperatureWithNoDP(uint8_t error, int16_t value)
+{
+	char noSystemErrDisp = 0;
+
+	if (IsLCDDisplay())
+	{
+		FormatTemperature( value, 1 );
+		if( error != ERROR_OK )
+		{
+			FormatError( error );
+		}
+		
+		locked_sprintf_P( displayStr, PSTR("TEMP  (%S)"), formatedUnit);
+		ks0xxx_SelectFont(ARIAL18BOLD, ks0xxx_ReadFontData, BLACK);
+		PrintLineInBox(LEFT,15,GLCD_PIXEL_X/2,0,displayStr);
+		
+		locked_sprintf_P( displayStr, PSTR("%s"), formatedValue );
+		ks0xxx_SelectFont(Bodoni89, ks0xxx_ReadFontData, BLACK);		
+		PrintLineInBox(LEFT,15,GLCD_PIXEL_X/2,16,displayStr);
+		
+		uint8_t length = 0;
+		memset(displayStr1,0,sizeof(displayStr1));
+		FormatTemperature (GetParameterValue( TEMP_LOWER_ALARM_ON_LIMIT ),1);
+		sprintf(displayStr1,"L%s     ",formatedValue);
+		
+		length = strlen(displayStr1);
+		FormatTemperature (GetParameterValue( TEMP_UPPER_ALARM_ON_LIMIT ),1);
+		sprintf(&displayStr1[length],"H%s",formatedValue);
+		
+		ks0xxx_SelectFont(Bodoni15, ks0xxx_ReadFontData, BLACK);
+		PrintLineInBox(LEFT,25,GLCD_PIXEL_X/2,90,displayStr1);
+	}
+	return noSystemErrDisp;
+}
+
+char DisplayHumidityWithNoDP(uint8_t error, int16_t value)
+{
+	char noSystemErrDisp = 0;
+	
+	if (IsLCDDisplay())
+	{
+		FormatHumidity( value, 1 );
+		if( error != ERROR_OK )
+		{
+			FormatError( error );
+		}
+		
+		locked_sprintf_P( displayStr, PSTR("RH  (%S)"), formatedUnit);
+		ks0xxx_SelectFont(ARIAL18BOLD, ks0xxx_ReadFontData, BLACK);
+		PrintLineInBox(LEFT,145,GLCD_PIXEL_X-1,0,displayStr);
+
+		locked_sprintf_P( displayStr, PSTR("%s"), formatedValue );
+		ks0xxx_SelectFont( Bodoni89, ks0xxx_ReadFontData, BLACK);
+		PrintLineInBox(LEFT,130,GLCD_PIXEL_X-1,16,displayStr);
+		
+		uint8_t length = 0;
+		memset(displayStr1,0,sizeof(displayStr1));
+		FormatHumidity (GetParameterValue( RH_LOWER_ALARM_ON_LIMIT ),1);
+		sprintf(displayStr1,"L%s     ",formatedValue);
+		
+		length = strlen(displayStr1);
+		FormatHumidity (GetParameterValue( RH_UPPER_ALARM_ON_LIMIT ),1);
+		sprintf(&displayStr1[length],"H%s",formatedValue);
+		
+		ks0xxx_SelectFont(Bodoni15, ks0xxx_ReadFontData, BLACK);
+		PrintLineInBox(LEFT,140,GLCD_PIXEL_X-1,90,displayStr1);
 	}
 	return noSystemErrDisp;
 }
@@ -1500,7 +1604,7 @@ static void FormatDP(uint8_t unit, int16_t value, int16_t range1, uint8_t AreaTy
 		else if( unit == (uint8_t)PRESSURE_H2O_MM )
 		{
 			result = value * 0.101971621298;
-			formatedUnit = PSTR("mmH2O");
+			formatedUnit = PSTR("mmWC");
 			decimal = 3;
 		}
 		else if( unit == (uint8_t)PRESSURE_H2O_INCH )
@@ -3752,6 +3856,12 @@ static uint8_t IsTempOrRHEnabled()
 {
     return(IsTemperatureEnabled() || IsHumidityEnabled());
 }
+
+static uint8_t IsTempAndRHEnabled()
+{
+	return(IsTemperatureEnabled() && IsHumidityEnabled());
+}
+
 
 static uint8_t IsPresAbsAlarmEnabled()
 {

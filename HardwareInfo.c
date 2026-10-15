@@ -28,16 +28,19 @@
 
 unsigned char IsDP1Enabled()
 {
+	//return 0;
    return ((~OSReadEEPromWord((unsigned int *)EA_CONFIG_SYSTEM)) & DIFF_PRESSURE1_ENB )? 1: 0;
 }
 
 unsigned char IsHumidityEnabled()
 {
+	//return 0;
    return ((~OSReadEEPromWord((unsigned int *)EA_CONFIG_SYSTEM)) & HUMIDITY_ENB )? 1: 0;
 }
 
 unsigned char IsTemperatureEnabled()
 {
+	//return 0;
    return ((~OSReadEEPromWord((unsigned int *)EA_CONFIG_SYSTEM)) & TEMPARATURE_ENB )? 1: 0;
 }
 

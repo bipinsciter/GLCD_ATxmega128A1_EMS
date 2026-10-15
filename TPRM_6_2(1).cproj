@@ -144,7 +144,7 @@
     </ToolchainSettings>
     <BuildTarget>all</BuildTarget>
     <CleanTarget>clean</CleanTarget>
-    <OutputFileName>TPRM_V3_0_1_BareMetal_NewFont</OutputFileName>
+    <OutputFileName>TPRM_V3_0_3_BareMetal_NewFont</OutputFileName>
     <OutputFileExtension>.elf</OutputFileExtension>
     <OutputType>Executable</OutputType>
   </PropertyGroup>

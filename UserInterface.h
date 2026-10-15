@@ -372,8 +372,11 @@ void BuzzerOff();
 void DisplayRTC(void);
 void DisplaySystemError();
 char DisplayDP1(uint8_t error, int16_t value);
+char DisplayDP1Only(uint8_t error, int16_t value);
 char DisplayTemperature(uint8_t error, int16_t value);
 char DisplayHumidity(uint8_t error, int16_t value);
+char DisplayTemperatureWithNoDP(uint8_t error, int16_t value);
+char DisplayHumidityWithNoDP(uint8_t error, int16_t value);
 
 char * FormatSystemError( char * str, int16_t value);
 
