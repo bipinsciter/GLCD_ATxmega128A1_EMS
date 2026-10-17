@@ -47,7 +47,7 @@
 #include "eepromAdr.h" 
 #include "rtc.h" 
 
-#define SOFTWARE_VERSION        304
+#define SOFTWARE_VERSION        305
 
 #define EEPROM_WRITE_TIMEOUT	30
 #define DP_AUTOCAL_HOLD_TICKS	60		// SETUP+DOWN hold time for DP auto-zero: 60 x 50 ms = 3 s

@@ -17,7 +17,7 @@ static int PaToCounts( float pa )
 {
 	float v = pa * 100;
 	if( v > 32767.0 ) return 32767;
-	if( v < -32768.0 ) return -32768;
+	if( v < -32767.0 ) return -32767;	// not -32768: abs(-32768) overflows in the display code
 	return (int)v;
 }
 

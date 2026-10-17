@@ -102,6 +102,16 @@ static int sorted[TOTAL_VAL_INDEX][WINDOW_SIZE]={0};   // temp buffer (global, n
 static unsigned char index[TOTAL_VAL_INDEX] = {0};
 static unsigned char count[TOTAL_VAL_INDEX] = {0};
 
+// DP is carried as int (16 bit) in 0.01 Pa, i.e. only +/-327.67 Pa. Any sum that
+// overflows wraps to the opposite sign (a large positive DP shows as negative),
+// so offsets are added in 32 bit and saturated back to the 16-bit range.
+static int Sat16( int32_t v )
+{
+	if( v > 32767 ) return 32767;
+	if( v < -32767 ) return -32767;
+	return (int)v;
+}
+
 int median_filter(uint8_t para, int new_sample)
 {
 	unsigned char i, j;
@@ -146,7 +156,7 @@ static uint8_t spikeRejectCnt[TOTAL_VAL_INDEX]={0};
 // samples; before, only upward jumps were checked and the value could freeze forever.
 static int SpikeFilter( uint8_t idx, uint8_t retVal, unsigned int rawVal, int convertedValue, uint8_t publish )
 {
-	int diff;
+	int32_t diff;
 	
 	convertedValue = median_filter(idx, convertedValue);
 	
@@ -158,10 +168,10 @@ static int SpikeFilter( uint8_t idx, uint8_t retVal, unsigned int rawVal, int co
 		return convertedValue;
 	}
 	
-	diff = convertedValue-lastParaValue[idx];
+	diff = (int32_t)convertedValue - lastParaValue[idx];	// 32 bit: +300 Pa -> -300 Pa must not wrap
 	if((diff < SPIKE_LIMIT) && (diff > -SPIKE_LIMIT))
 	{
-		convertedValue = convertedValue + (0.02 * diff);
+		convertedValue = Sat16( (int32_t)(convertedValue + (0.02 * diff)) );
 	}
 	else if(spikeRejectCnt[idx] < SPIKE_MAX_REJECT)
 	{
@@ -216,7 +226,7 @@ void DEVICEIO_FUNC_NAME( void )
 		if ( retVal == ERROR_OK )
 		{
 			sensorVal[DP1_VAL_INDEX].rawValue = value;
-			convertedValue = value - GetParameterValue(DP1_ZERO_ADJ);
+			convertedValue = Sat16( (int32_t)value - GetParameterValue(DP1_ZERO_ADJ) );
 		}
 		else
 		{
@@ -270,7 +280,7 @@ void DEVICEIO_FUNC_NAME( void )
 				
 				dp_sw_factor_add[0] = 0;
 			}
-			convertedValue += su16_convertedValue[0];
+			convertedValue = Sat16( (int32_t)convertedValue + su16_convertedValue[0] );
 		}
 		
 		AveragePara(DP1_VAL_INDEX, retVal, value, convertedValue );
