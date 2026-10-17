@@ -95,7 +95,7 @@ void FreeRTOSWriteEEPromWord(unsigned int * address, unsigned int value)
 {
    //OSSemaTakeEver( EEPromMutex );
    eeprom_busy_wait();
-   eeprom_write_word(address, value);
+   eeprom_update_word(address, value);   // writes only if changed (EEPROM wear)
    eeprom_busy_wait();
    //OSSemaGive( EEPromMutex );
 }
@@ -112,7 +112,7 @@ void FreeRTOSWriteEEPromBlock(uint8_t * address, uint8_t *value, uint8_t size)
 {
 	//OSSemaTakeEver( EEPromMutex );
 	eeprom_busy_wait();
-	eeprom_write_block(value, address, size);
+	eeprom_update_block(value, address, size);   // writes only changed bytes (EEPROM wear)
 	//OSSemaGive( EEPromMutex );
 }
 

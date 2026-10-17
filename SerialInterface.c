@@ -2,6 +2,7 @@
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
 #include <avr/interrupt.h>
+#include <util/atomic.h>
 #include <stdlib.h>
 #include <stdio.h>        
 #include <string.h>        
@@ -111,6 +112,11 @@ static int paraValue;
 static uint8_t rxDataLen[2]={0}, rxMode=0, msgRcvd=0, RxTimeout=0;
 static uint8_t rxMode1=0, msgRcvd1=0, RxTimeout1=0;
 
+// Copy of DEVICE_ID for the RX ISRs. Reading the parameter (flash table search +
+// EEPROM read) inside an ISR could collide with an EEPROM write in the main loop.
+// Refreshed from the main loop every 50 ms in UARTC0RxTimeout().
+static volatile uint8_t su8_deviceId;
+
 uint8_t u8_resetTimer=0,u8_DFUresetTimer=0,gu8_SetBySerial=0;
 	
 TimerHandle_t xBaseTimer;
@@ -157,7 +163,7 @@ ISR(USARTC0_RXC_vect)
 	}
 	else if(rxMode==1)
 	{
-		if((ch==GetParameterValue( DEVICE_ID )) || (ch==0x00))
+		if((ch==su8_deviceId) || (ch==0x00))
 		{
 			rxDataBuffer[0][rxDataLen[0]++]=ch;
 			rxMode=2;
@@ -206,33 +212,81 @@ ISR(USARTC0_RXC_vect)
 			RxTimeout = 4;
 		}
 	}
-	if(rxDataLen[0]>=RX0_BUFSZ) rxDataLen[0]=0;
+	if(rxDataLen[0]>=RX0_BUFSZ)
+	{	// Frame too long: discard it and wait for the next SOT.
+		// (Wrapping the index to 0 made a following EOT compute CRC over 65535 bytes.)
+		rxMode=0;
+		rxDataLen[0]=0;
+		RxTimeout=0;
+	}
+}
+
+//=============================================================================================================
+// Interrupt-driven transmit. SendPacket() only copies the frame into a ring buffer;
+// the DRE interrupt sends it and the TXC interrupt releases the RS485 driver (DE)
+// after the last bit has left. The main loop no longer waits ~1 ms per byte.
+#define TX_RING_SZ	TX0_BUFSZ
+
+static volatile uint8_t txRing[2][TX_RING_SZ];
+static volatile uint8_t txHead[2], txTail[2];	// head: written by main loop, tail: by DRE ISR
+static volatile uint8_t txBusy[2];				// 1 while DE is on, cleared in TXC ISR
+
+static USART_t * const txUsart[2] = { &USARTC0, &USARTC1 };
+
+// Enable DRE interrupt (and keep TXC off while data is queued)
+static void TxStart( uint8_t port )
+{
+	ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+	{
+		txUsart[port]->CTRLA = (txUsart[port]->CTRLA & ~(USART_DREINTLVL_gm | USART_TXCINTLVL_gm)) | USART_DREINTLVL_MED_gc;
+	}
+}
+
+static void TxPut( uint8_t port, uint8_t c )
+{
+	uint8_t next = txHead[port] + 1;
+	if( next >= TX_RING_SZ ) next = 0;
+
+	while( next == txTail[port] ) TxStart(port);	// ring full: make sure the ISR is draining it
+
+	txRing[port][txHead[port]] = c;
+	txHead[port] = next;
+}
+
+static inline void TxDreIsr( uint8_t port )
+{
+	USART_t * u = txUsart[port];
+	uint8_t t = txTail[port];
+
+	if( t != txHead[port] )
+	{
+		u->STATUS = USART_TXCIF_bm;		// clear TX-complete flag before loading the next byte
+		u->DATA = txRing[port][t];
+		if( ++t >= TX_RING_SZ ) t = 0;
+		txTail[port] = t;
+	}
+	else
+	{	// Ring empty: stop DRE, wait for the shift register to empty (TXC) before releasing DE
+		u->CTRLA = (u->CTRLA & ~USART_DREINTLVL_gm) | USART_TXCINTLVL_MED_gc;
+	}
 }
 
 ISR(USARTC0_DRE_vect)
 {
-	signed char cChar, cTaskWoken = pdFALSE;
-
-	if( xQueueReceiveFromISR( vUSARTC0_TxQueue, &cChar, &cTaskWoken ) == pdTRUE )
-	{
-		/* Send the next character queued for Tx. */
-		USARTC0_DATA = cChar;
-	}
-	else
-	{
-		/* Queue empty, nothing to send. */
-		USARTC0_CTRLA &= ~(USART_DREINTLVL_gm);			// Disable UDRE interrupt
-	}
+	TxDreIsr(0);
 }
 
 ISR(USARTC0_TXC_vect)
 {
 	TX0_DIS_RS485;
 	USARTC0_CTRLA &= ~(USART_TXCINTLVL_gm);			// Disable UTXC interrupt
+	txBusy[0] = 0;
 }
 
 void UARTC0RxTimeout(void)
 {
+	su8_deviceId = (uint8_t)GetParameterValue( DEVICE_ID );
+
 	if(RxTimeout)
 	{
 		RxTimeout--;
@@ -264,7 +318,7 @@ ISR(USARTC1_RXC_vect)
 	}
 	else if(rxMode1==1)
 	{
-		if((ch==GetParameterValue( DEVICE_ID )) || (ch==0x00))
+		if((ch==su8_deviceId) || (ch==0x00))
 		{
 			rxDataBuffer[1][rxDataLen[1]++]=ch;
 			rxMode1=2;
@@ -313,29 +367,24 @@ ISR(USARTC1_RXC_vect)
 			RxTimeout1 = 4;
 		}
 	}
-	if(rxDataLen[1]>=RX1_BUFSZ) rxDataLen[1]=0;
+	if(rxDataLen[1]>=RX1_BUFSZ)
+	{	// Frame too long: discard it and wait for the next SOT.
+		rxMode1=0;
+		rxDataLen[1]=0;
+		RxTimeout1=0;
+	}
 }
 
 ISR(USARTC1_DRE_vect)
 {
-	signed char cChar, cTaskWoken = pdFALSE;
-
-	if( xQueueReceiveFromISR( vUSARTC1_TxQueue, &cChar, &cTaskWoken ) == pdTRUE )
-	{
-		/* Send the next character queued for Tx. */
-		USARTC1_DATA = cChar;
-	}
-	else
-	{
-		/* Queue empty, nothing to send. */
-		USARTC1_CTRLA &= ~(USART_DREINTLVL_gm);			// Disable UDRE interrupt
-	}
+	TxDreIsr(1);
 }
 
 ISR(USARTC1_TXC_vect)
 {
 	TX1_DIS_RS485;
 	USARTC1_CTRLA &= ~(USART_TXCINTLVL_gm);			// Disable UTXC interrupt
+	txBusy[1] = 0;
 }
 
 void UARTC1RxTimeout(void)
@@ -518,7 +567,8 @@ void SerialInterfaceTask( void )
 
 		    case READ_PARAMETER:
 					
-				if( rxDataLen[Ind] < (uint8_t)1 )
+				// <devId><cmd><paraId><cksum> => at least 4 bytes
+				if( rxDataLen[Ind] < (uint8_t)4 )
 				{
     		        txDataBuffer[0] = ERROR_PARA_INVALID;
 	    			SendPacket(Ind, READ_PARAMETER, txDataBuffer, 1);
@@ -583,13 +633,18 @@ void SerialInterfaceTask( void )
 				}
 				break;
 		    case WRITE_PARAMETER:
-                if( rxDataLen[Ind] < (uint8_t)2 )
+                // <devId><cmd><paraId><value 1..n><cksum> => at least 5 bytes
+                if( rxDataLen[Ind] < (uint8_t)5 )
 				{
   					txDataBuffer[0] = ERROR_PARA_INVALID;
 	    			SendPacket(Ind, WRITE_PARAMETER, txDataBuffer, 1);
 		    		break;
 			    }
-				  
+
+				// Terminate the value string on the (already verified) checksum byte,
+				// so atoi()/string copy never reads the checksum or stale bytes.
+				rxDataBuffer[Ind][rxDataLen[Ind]-1] = '\0';
+
 				switch((uint8_t)rxDataBuffer[Ind][2])
 				{
 					case IP1_HIGH_NAME:
@@ -610,7 +665,7 @@ void SerialInterfaceTask( void )
 					case OP4_LOW_NAME:
 					  
 						memset(&gu8_inOutput[(uint8_t)rxDataBuffer[Ind][2]-IP1_HIGH_NAME][0],0,10);
-						memcpy(&gu8_inOutput[(uint8_t)rxDataBuffer[Ind][2]-IP1_HIGH_NAME][0],&rxDataBuffer[Ind][3],8);					  
+						strncpy(&gu8_inOutput[(uint8_t)rxDataBuffer[Ind][2]-IP1_HIGH_NAME][0],&rxDataBuffer[Ind][3],8);
 						ch = SetParameterStr( (uint8_t)rxDataBuffer[Ind][2], (uint8_t*)&gu8_inOutput[(uint8_t)rxDataBuffer[Ind][2]-IP1_HIGH_NAME][0] );
 						  
 						txDataBuffer[0] = ch;
@@ -621,7 +676,7 @@ void SerialInterfaceTask( void )
 						}
 						else
 						{
-							memcpy(&txDataBuffer[2],&rxDataBuffer[Ind][3],8);
+							memcpy(&txDataBuffer[2],&gu8_inOutput[(uint8_t)rxDataBuffer[Ind][2]-IP1_HIGH_NAME][0],8);
 							SendPacket(Ind, WRITE_PARAMETER, txDataBuffer, 10);
 						}
 					  
@@ -743,28 +798,24 @@ static void SendPacket( uint8_t comId, uint8_t cId, char * val, uint8_t len )
 	for(i = len; i; i--)
 	ckSum = (ckSum + val[i-1]) & 0x7F;
 
-	if(!comId)
+	uint8_t port = comId ? 1 : 0;
+
+	// Stop a pending TXC from the previous frame releasing DE while this one is queued
+	ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
 	{
-		TX0_ENB_RS485;
-		put_char(&USARTC0, SERIAL_RESP_SOT );
-		put_char(&USARTC0, devId );
-		put_char(&USARTC0, cId );
-		for( i = 0; i < len; i++) put_char(&USARTC0, val[i] );
-		put_char(&USARTC0, ckSum );
-		put_char(&USARTC0, SERIAL_RESP_EOT );
-		TX0_DIS_RS485;
+		txUsart[port]->CTRLA &= ~USART_TXCINTLVL_gm;
+		if(port) TX1_ENB_RS485; else TX0_ENB_RS485;
+		txBusy[port] = 1;
 	}
-	else
-	{
-		TX1_ENB_RS485;
-		put_char(&USARTC1, SERIAL_RESP_SOT );
-		put_char(&USARTC1, devId );
-		put_char(&USARTC1, cId );
-		for( i = 0; i < len; i++) put_char(&USARTC1, val[i] );
-		put_char(&USARTC1, ckSum );
-		put_char(&USARTC1, SERIAL_RESP_EOT );
-		TX1_DIS_RS485;
-	}
+
+	TxPut(port, SERIAL_RESP_SOT );
+	TxPut(port, devId );
+	TxPut(port, cId );
+	for( i = 0; i < len; i++) TxPut(port, val[i] );
+	TxPut(port, ckSum );
+	TxPut(port, SERIAL_RESP_EOT );
+
+	TxStart(port);		// DE is released by the TXC interrupt after the last byte
 	
 	//buff1[0] = SERIAL_RESP_SOT;
 	//buff1[1] = devId;
@@ -1061,6 +1112,8 @@ void SerialInterfaceInit()
    uint16_t databits;
    uint8_t noOfbits, parity, stopbit;
 
+   su8_deviceId = (uint8_t)GetParameterValue( DEVICE_ID );
+
    TX0_SETPORT_DIR;
    TX1_SETPORT_DIR;
    TX0_DIS_RS485;
@@ -1112,6 +1165,7 @@ void SerialInterfaceInit()
 
 static int uart_putchar(char c, FILE *stream)
 {
+   while( txBusy[0] );		// let an interrupt-driven frame finish first (printer text is sent with DE off, as before)
    put_char(&USARTC0, c);
    return 0;
 }

@@ -42,7 +42,8 @@ void Kalman_Init(KalmanFilter *kf, float q, float r, float initial_estimate)
 	kf->Q = q;          // Process noise covariance
 	kf->R = r;          // Measurement noise covariance
 	kf->X = initial_estimate;  // Initial estimate
-	kf->P = 1.0;        // Initial estimate covariance
+	kf->P = 1000.0;     // Large initial covariance: first measurement is taken almost as-is
+	                    // (with 1.0 the first output was only ~91% of the reading, from 0)
 }
 
 // Update the Kalman filter with a new measurement
@@ -135,6 +136,46 @@ int median_filter(uint8_t para, int new_sample)
 }
 
 
+#define SPIKE_LIMIT			1000	// max step accepted between samples
+#define SPIKE_MAX_REJECT	4		// after this many rejected samples (1 s) accept the new level
+static uint8_t spikeRejectCnt[TOTAL_VAL_INDEX]={0};
+
+// Median + spike filter, then publish via AveragePara() when publish != 0.
+// Returns the accepted value (the last accepted one if this sample was rejected).
+// Jumps larger than SPIKE_LIMIT (either direction) are ignored for up to SPIKE_MAX_REJECT
+// samples; before, only upward jumps were checked and the value could freeze forever.
+static int SpikeFilter( uint8_t idx, uint8_t retVal, unsigned int rawVal, int convertedValue, uint8_t publish )
+{
+	int diff;
+	
+	convertedValue = median_filter(idx, convertedValue);
+	
+	if(ignoreCnter[idx]<15)
+	{
+		if(publish) AveragePara(idx, retVal, rawVal, convertedValue );
+		lastParaValue[idx]=convertedValue;
+		ignoreCnter[idx]++;
+		return convertedValue;
+	}
+	
+	diff = convertedValue-lastParaValue[idx];
+	if((diff < SPIKE_LIMIT) && (diff > -SPIKE_LIMIT))
+	{
+		convertedValue = convertedValue + (0.02 * diff);
+	}
+	else if(spikeRejectCnt[idx] < SPIKE_MAX_REJECT)
+	{
+		spikeRejectCnt[idx]++;
+		return lastParaValue[idx];	// rejected sample, keep last accepted value
+	}
+	
+	spikeRejectCnt[idx]=0;
+	if(publish) AveragePara(idx, retVal, rawVal, convertedValue );
+	lastParaValue[idx]=convertedValue;
+	return convertedValue;
+}
+
+
 #define DP_SW_FACT_DIVISION		10
 static int16_t su16_dpAlmdiff[3]={0},su16_convertedValue[3]={0},LastDPManpThreshold[3]={0},LastDPManLimit[3]={0};
 static uint8_t gu8_dp_sw_factor_add_cnt[3]={0};
@@ -161,7 +202,7 @@ void DEVICEIO_FUNC_NAME( void )
 {
 	uint8_t retVal;
 	int value;
-	int convertedValue, diff=0;
+	int convertedValue;
 	static uint16_t TempfireAlmTimer=0,TempAlmTimer=0;
 	
 	systemError = ERROR_OK;
@@ -189,24 +230,7 @@ void DEVICEIO_FUNC_NAME( void )
 			}
 		}
 		
-		convertedValue = median_filter(DP1_VAL_INDEX,convertedValue);
-		
-		if(ignoreCnter[DP1_VAL_INDEX]<15)
-		{
-			AveragePara(DP1_VAL_INDEX, retVal, value, convertedValue );
-			lastParaValue[DP1_VAL_INDEX]=convertedValue;
-			ignoreCnter[DP1_VAL_INDEX]++;
-		}
-		else
-		{
-			diff = convertedValue-lastParaValue[DP1_VAL_INDEX];
-			if(diff<1000)
-			{
-				convertedValue = convertedValue + (0.02 * diff);
-				AveragePara(DP1_VAL_INDEX, retVal, value, convertedValue );
-				lastParaValue[DP1_VAL_INDEX]=convertedValue;
-			}
-		}
+		convertedValue = SpikeFilter(DP1_VAL_INDEX, retVal, value, convertedValue, 0);	// published once below, after the offset
 		//------------------------------------------------------------------------------
 		
 		if(GetParameterValue(DP1_MANP_THRESHOLD) != LastDPManpThreshold[0])
@@ -622,7 +646,7 @@ void TEMPRHIO_FUNC_NAME( void )
 {
 	uint8_t retVal = -1, checkSum;
 	unsigned int value, value1;
-	int convertedValue, diff=0;
+	int convertedValue;
 	
 	if( GetParameterValue(TEMP_RH_SENS_TYPE) == TEMP_RH_SENS_SHT25 )
 	{
@@ -647,24 +671,7 @@ void TEMPRHIO_FUNC_NAME( void )
 				}
 			}
 			
-			convertedValue = median_filter(TEMPERATURE_VAL_INDEX,convertedValue);
-			
-			if(ignoreCnter[TEMPERATURE_VAL_INDEX]<15)
-			{
-				AveragePara(TEMPERATURE_VAL_INDEX, retVal, value, convertedValue );
-				lastParaValue[TEMPERATURE_VAL_INDEX]=convertedValue;
-				ignoreCnter[TEMPERATURE_VAL_INDEX]++;
-			}
-			else
-			{
-				diff = convertedValue-lastParaValue[TEMPERATURE_VAL_INDEX];
-				if(diff<1000)
-				{
-					convertedValue = convertedValue + (0.02 * diff);
-					AveragePara(TEMPERATURE_VAL_INDEX, retVal, value, convertedValue );
-					lastParaValue[TEMPERATURE_VAL_INDEX]=convertedValue;
-				}
-			}
+			convertedValue = SpikeFilter(TEMPERATURE_VAL_INDEX, retVal, value, convertedValue, 1);
 		}
 
 		if (IsHumidityEnabled())
@@ -688,36 +695,24 @@ void TEMPRHIO_FUNC_NAME( void )
 				}
 			}
 			
-			convertedValue = median_filter(HUMIDITY_VAL_INDEX,convertedValue);
-			
-			if(ignoreCnter[HUMIDITY_VAL_INDEX]<15)
-			{
-				AveragePara(HUMIDITY_VAL_INDEX, retVal, value, convertedValue );
-				lastParaValue[HUMIDITY_VAL_INDEX]=convertedValue;
-				ignoreCnter[HUMIDITY_VAL_INDEX]++;
-			}
-			else
-			{
-				diff = convertedValue-lastParaValue[HUMIDITY_VAL_INDEX];
-				if(diff<1000)
-				{
-					convertedValue = convertedValue + (0.02 * diff);
-					AveragePara(HUMIDITY_VAL_INDEX, retVal, value, convertedValue );
-					lastParaValue[HUMIDITY_VAL_INDEX]=convertedValue;
-				}
-			}
+			convertedValue = SpikeFilter(HUMIDITY_VAL_INDEX, retVal, value, convertedValue, 1);
 		}
 	}
 	else if( GetParameterValue(TEMP_RH_SENS_TYPE) == TEMP_RH_SENS_IDT_HS3100 )
 	{
 		if(IsTemperatureEnabled() || IsHumidityEnabled())
 		{
-			StartSensor_IDT_HS3100(0);
-				
-			_delay_ms(500);
-			
-			retVal = GetSensorReadings_IDT_HS3100(0, &value, &value1 );
-		}  
+			// Non-blocking: read the conversion started on the previous call
+			// (250 ms ago, sensor needs ~35 ms), then start the next one.
+			static uint8_t hs3100Started = 0;
+
+			if(hs3100Started)
+				retVal = GetSensorReadings_IDT_HS3100(0, &value, &value1 );
+			else
+				retVal = ERROR_TEMP_RH_SENS_I2C;
+
+			hs3100Started = (StartSensor_IDT_HS3100(0) == ERROR_OK);
+		}
 
 		if(IsTemperatureEnabled())
 		{   
@@ -738,24 +733,7 @@ void TEMPRHIO_FUNC_NAME( void )
 				}
 			}
 			
-			convertedValue = median_filter(TEMPERATURE_VAL_INDEX, convertedValue);
-			
-			if(ignoreCnter[TEMPERATURE_VAL_INDEX]<15)
-			{
-				AveragePara(TEMPERATURE_VAL_INDEX, retVal, value, convertedValue );
-				lastParaValue[TEMPERATURE_VAL_INDEX]=convertedValue;
-				ignoreCnter[TEMPERATURE_VAL_INDEX]++;
-			}
-			else
-			{
-				diff = convertedValue-lastParaValue[TEMPERATURE_VAL_INDEX];
-				if(diff<1000)
-				{
-					convertedValue = convertedValue + (0.02 * diff);
-					AveragePara(TEMPERATURE_VAL_INDEX, retVal, value, convertedValue );
-					lastParaValue[TEMPERATURE_VAL_INDEX]=convertedValue;
-				}
-			}
+			convertedValue = SpikeFilter(TEMPERATURE_VAL_INDEX, retVal, value, convertedValue, 1);
 		}
 		
 		if (IsHumidityEnabled())
@@ -777,31 +755,26 @@ void TEMPRHIO_FUNC_NAME( void )
 				}
 			}
 			
-			convertedValue = median_filter(HUMIDITY_VAL_INDEX, convertedValue);
-			
-			if(ignoreCnter[HUMIDITY_VAL_INDEX]<15)
-			{
-				AveragePara(HUMIDITY_VAL_INDEX, retVal, value1, convertedValue );
-				lastParaValue[HUMIDITY_VAL_INDEX]=convertedValue;
-				ignoreCnter[HUMIDITY_VAL_INDEX]++;
-			}
-			else
-			{
-				diff = convertedValue-lastParaValue[HUMIDITY_VAL_INDEX];
-				if(diff<1000)
-				{
-					convertedValue = convertedValue + (0.02 * diff);
-					AveragePara(HUMIDITY_VAL_INDEX, retVal, value1, convertedValue );
-					lastParaValue[HUMIDITY_VAL_INDEX]=convertedValue;
-				}
-			}
+			convertedValue = SpikeFilter(HUMIDITY_VAL_INDEX, retVal, value1, convertedValue, 1);
 		}
 	}
 }
 
 static void AveragePara( uint8_t SenNo, uint8_t error, unsigned int rawVal, int convertedVal )
 {
-	convertedVal = Kalman_Update(&Kalmanfilter[SenNo], convertedVal);
+	if( error != ERROR_OK )
+	{
+		// Sensor error: restart the filters so the error placeholder (0) is not
+		// mixed into the first good readings (that caused false LOW alarms).
+		Kalman_Init(&Kalmanfilter[SenNo], 0.01, 0.1, 0.0);
+		count[SenNo] = 0;
+		index[SenNo] = 0;
+		spikeRejectCnt[SenNo] = 0;
+	}
+	else
+	{
+		convertedVal = Kalman_Update(&Kalmanfilter[SenNo], convertedVal);
+	}
 	//OSSemaTakeEver(DeviceValueMutex);
 	sensorVal[SenNo].errorCode = error;
 	sensorVal[SenNo].rawValue = rawVal;

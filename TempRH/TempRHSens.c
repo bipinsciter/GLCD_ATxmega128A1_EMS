@@ -110,6 +110,10 @@ uint8_t StartSensor_IDT_HS3100(uint8_t SensNo)
 		return ERROR_TEMP_RH_SENS_I2C;
 	}
 
+	// Measurement request is <addr+W> followed by STOP; release the bus
+	// so it is not left mid-transaction until the result is read.
+	sw_i2c1_stop();
+
 	return ERROR_OK;
 }
 

@@ -47,9 +47,10 @@
 #include "eepromAdr.h" 
 #include "rtc.h" 
 
-#define SOFTWARE_VERSION        303
+#define SOFTWARE_VERSION        304
 
 #define EEPROM_WRITE_TIMEOUT	30
+#define DP_AUTOCAL_HOLD_TICKS	60		// SETUP+DOWN hold time for DP auto-zero: 60 x 50 ms = 3 s
 
 #define TRUE 1
 #define FALSE 0
@@ -707,6 +708,26 @@ static char prevKeys, currKeys, keys, keysPressed;
 uint16_t eeprom_address = 0;
 int16_t eeprom_value = 0;
 uint8_t eeprom_write_timeout = 0;
+
+// Deferred EEPROM write (one slot, written by the main loop after EEPROM_WRITE_TIMEOUT ticks).
+// If a different parameter is already pending, write that one out first so it is not lost.
+static void QueueParaEepromWrite(unsigned int eepromAddr, int16_t value)
+{
+	if( eeprom_write_timeout && eeprom_address != eepromAddr )
+		OSWriteEEPromWord((unsigned int *)eeprom_address, eeprom_value);
+
+	eeprom_address = eepromAddr;
+	eeprom_value = value;
+	eeprom_write_timeout = EEPROM_WRITE_TIMEOUT;
+}
+
+// Parameter read that also sees a value still waiting in the deferred write slot.
+static int16_t ReadParaEeprom(unsigned int eepromAddr)
+{
+	if( eeprom_write_timeout && eeprom_address == eepromAddr )
+		return eeprom_value;
+	return (int16_t)OSReadEEPromWord((unsigned int *)eepromAddr);
+}
    
 //static uint8_t timer, curDisplay;
 static SENSOR_VALUE senVal, senVal3;
@@ -724,8 +745,8 @@ static char dispValSel = 0;
 void UserInterfaceTask( void )
 {
 	//OSSleep(KEYBOARD_LOOP_TIME);
-	static uint8_t DPautocal=0;
-	
+	static uint8_t DPautocal=0, DPautocalHold=0;
+
 	currKeys = (~KEYPAD_PORT_IN) & KEYS_ALL_MASK;
 	keysPressed = keys;
 	keys |= (currKeys & prevKeys);
@@ -760,29 +781,42 @@ void UserInterfaceTask( void )
 
 	if( LCDControl == SENSOR_VALUES )
 	{
-		if(( keysPressed & UP_KEY ) && ( keysPressed & DOWN_KEY ))
+		// Both keys held and one of them just pressed (requiring both new presses
+		// in the same 50 ms tick made the silence combo almost never work)
+		if((( keys & (UP_KEY | DOWN_KEY)) == (UP_KEY | DOWN_KEY)) && ( keysPressed & (UP_KEY | DOWN_KEY)))
 		{
 			SetBuzzerSuppressionReq();   // Suppress buzzer request (valid when displaying sensor values)
 		}
 		else if( !(KEYPAD_PORT_IN & (SETUP_KEY | DOWN_KEY) ))	//Auto DP calibration
 		{
-			if(!DPautocal)
+			// Keys must be held continuously for DP_AUTOCAL_HOLD_TICKS (also debounces),
+			// the reading must be valid, and the value goes through SetParameter() so
+			// it is clamped to MIN/MAX_DP1_ZERO_ADJ.
+			if(DPautocalHold < DP_AUTOCAL_HOLD_TICKS)
+			{
+				DPautocalHold++;
+			}
+			else if(!DPautocal)
 			{
 				if(IsDP1Enabled())
 				{
 					GetPareValue(DP1_VAL_INDEX, &senVal3);
-					OSWriteEEPromWord((unsigned int *)EA_DP1_ZERO_ADJ, senVal3.rawValue);
+					if(senVal3.errorCode == ERROR_OK)
+					{
+						int zeroAdj = (int16_t)senVal3.rawValue;
+						SetParameter( DP1_ZERO_ADJ, &zeroAdj );
+						DPautocal = 1;
+					}
 				}
-
-				DPautocal = 1;
 			}
-				
-			displayPage1 = 4;
+
+			displayPage1 = DPautocal ? 4 : 0;
 		}
 		else
 		{
 			displayPage1 = 0;
 			DPautocal = 0;
+			DPautocalHold = 0;
 		}
 		return;//continue;
 	}
@@ -902,15 +936,9 @@ void DisplaySensorValues(void)
 			uc1638_FillScreen(BLANK1);
 			ks0xxx_SelectFont(Font_Verdana_10x24, ks0xxx_ReadFontData, BLACK);
 			PrintLineInBoxWOClear(CENTER,0,GLCD_PIXEL_X-1,60,"< DFU MODE >");
-			
-			u8_DFUresetTimer--;
-			if(!u8_DFUresetTimer)
-			{
-				//SoftReset ------------------
-				CPU_CCP  = CCP_IOREG_gc;
-				RST.CTRL = RST_SWRST_bm ;
-			}
 
+			// Countdown and reset are done in PERIODIC_FUNC_NAME(), so they also
+			// happen while the editor is open or the LCD is disabled.
 			return;
 		}
 		
@@ -1605,7 +1633,7 @@ static void FormatDP(uint8_t unit, int16_t value, int16_t range1, uint8_t AreaTy
 		{
 			result = value * 0.101971621298;
 			formatedUnit = PSTR("mmWC");
-			decimal = 3;
+			decimal = 2;
 		}
 		else if( unit == (uint8_t)PRESSURE_H2O_INCH )
 		{
@@ -1965,6 +1993,16 @@ static unsigned char editorState = 0;
 static int activePara = 0;
 static PARA_INFO activeParaInfo;
 static int activeParaValue;
+
+// Change the edited value without 16-bit overflow (holding UP at 32767 used to wrap
+// negative and jump to the minimum). The parameter handler then clamps to its own range.
+static void StepParaValue( int step )
+{
+	int32_t v = (int32_t)activeParaValue + step;
+	if( v > 32767 ) v = 32767;
+	if( v < -32768 ) v = -32768;
+	activeParaValue = (int)v;
+}
 static unsigned int keyTimer;
 
 static void DisplayEditor(char keysPressed, char keys)
@@ -2087,13 +2125,13 @@ static void DisplayEditor(char keysPressed, char keys)
       // wait for at least one key is pressed
       if(( keysPressed & UP_KEY ) != 0 && ( keys & DOWN_KEY ) == 0 )
       {
-		  activeParaValue++;
+		  StepParaValue(1);
          //OSSemaTakeEver(UIMutex);
          dispStr = ( * activeParaInfo.parameterHandler)( PARA_WRITE, &activeParaValue);  // Para value +
       }
       else if(( keys & UP_KEY ) == 0 && ( keysPressed & DOWN_KEY ) != 0 )
       {
-		  activeParaValue--;
+		  StepParaValue(-1);
          //OSSemaTakeEver(UIMutex);
          dispStr = ( * activeParaInfo.parameterHandler)( PARA_WRITE, &activeParaValue);  // Para value -
       }
@@ -2135,13 +2173,13 @@ static void DisplayEditor(char keysPressed, char keys)
          return;  // Do not do anything 
       else if (( keysPressed & UP_KEY ) != 0)
       {
-		 activeParaValue++;
+		 StepParaValue(1);
          //OSSemaTakeEver(UIMutex);
          dispStr = ( * activeParaInfo.parameterHandler)( PARA_WRITE, &activeParaValue);  // Para value +
       }
       else if(( keysPressed & DOWN_KEY ) != 0)
       {
-		 activeParaValue--;
+		 StepParaValue(-1);
          //OSSemaTakeEver(UIMutex);
          dispStr = ( * activeParaInfo.parameterHandler)( PARA_WRITE, &activeParaValue);  // Para value -
       }
@@ -2161,11 +2199,11 @@ static void DisplayEditor(char keysPressed, char keys)
 
          if (( keys & DOWN_KEY ) != 0 )
 		 {
-			activeParaValue -= paraCnt;
+			StepParaValue(-(int)paraCnt);
 		 }
          else
 		 {
-			activeParaValue += paraCnt;
+			StepParaValue((int)paraCnt);
 		 }
 
 		
@@ -2369,7 +2407,7 @@ static void ParameterOperationsOnLowSettings( uint8_t operationType, int16_t * p
 
    if( operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_READ )
    {
-      *paraValue = OSReadEEPromWord((unsigned int *)eepromAddr);
+      *paraValue = ReadParaEeprom(eepromAddr);
 	  return;
    }
    if(operationType == (uint8_t)PARA_DEFAULT )
@@ -2390,9 +2428,7 @@ static void ParameterOperationsOnLowSettings( uint8_t operationType, int16_t * p
 
 	if(!isMasterReset)
 	{
-	   eeprom_address = eepromAddr;
-	   eeprom_value = *paraValue;
-	   eeprom_write_timeout = EEPROM_WRITE_TIMEOUT;
+	   QueueParaEepromWrite(eepromAddr, *paraValue);
 	}
 	else
 	{
@@ -2407,7 +2443,7 @@ static void ParameterOperationsOnHighSettings( uint8_t operationType, int16_t * 
 
    if( operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_READ )
    {
-      *paraValue = OSReadEEPromWord((unsigned int *)eepromAddr);
+      *paraValue = ReadParaEeprom(eepromAddr);
 	  return;
    }
    else if(operationType == (uint8_t)PARA_DEFAULT )
@@ -2428,9 +2464,7 @@ static void ParameterOperationsOnHighSettings( uint8_t operationType, int16_t * 
    
    if(!isMasterReset)
    {
-	   eeprom_address = eepromAddr;
-	   eeprom_value = *paraValue;
-	   eeprom_write_timeout = EEPROM_WRITE_TIMEOUT;
+	   QueueParaEepromWrite(eepromAddr, *paraValue);
    }
    else
    {
@@ -2616,7 +2650,7 @@ static char * PressureUnitProcessPara( uint8_t operationType, int16_t * paraValu
       else if( *paraValue == PRESSURE_PA )
          locked_sprintf_P( displayStr, PSTR("Pa"));
       else if( *paraValue == PRESSURE_H2O_MM )
-         locked_sprintf_P( displayStr, PSTR("mH2O"));
+         locked_sprintf_P( displayStr, PSTR("mmWC"));
       else if( *paraValue == PRESSURE_H2O_INCH )
          locked_sprintf_P( displayStr, PSTR("iH2O"));
       else if( *paraValue == PRESSURE_HG_INCH )
@@ -2819,19 +2853,61 @@ static char * TimeSecondPara( uint8_t operationType, int16_t * paraValue )
    return ParameterOperationsTimeValues( 0x7f, 0, operationType, paraValue, D_TIME_SECONDS, MIN_TIME_SECONDS, MAX_TIME_SECONDS, RTC_TIMESEC_REG );
 }
 
+static uint8_t BcdRegToBin( uint8_t regAddr, uint8_t mask, uint8_t dflt )
+{
+   uint8_t temp;
+   if( RTCReadTimeDateRegister(regAddr, &temp ) != ERROR_OK )
+      return dflt;
+   temp &= mask;
+   return (temp & 0xf) + ( temp >> 4 ) * 10;
+}
+
+// Days in the month currently stored in the RTC (years 2000-2099)
+static uint8_t RTCDaysInMonth( void )
+{
+   static const uint8_t days[12] = { 31,28,31,30,31,30,31,31,30,31,30,31 };
+   uint8_t month = BcdRegToBin( RTC_DATE_MONTH_REG, 0x1f, 1 );
+   uint8_t year = BcdRegToBin( RTC_DATE_YEAR_REG, 0xff, 0 );
+
+   if( month < 1 || month > 12 ) return 31;
+   if( month == 2 && ( year % 4 ) == 0 ) return 29;
+   return days[month-1];
+}
+
+// After month/year change, pull the day back if it no longer exists (e.g. 31 -> Feb)
+static void RTCClampDay( uint8_t operationType )
+{
+   uint8_t day, maxDay;
+
+   if( operationType == (uint8_t)PARA_READ_VALUE_ONLY || operationType == (uint8_t)PARA_READ )
+      return;
+   day = BcdRegToBin( RTC_DATE_DATE_REG, 0x3f, 1 );
+   maxDay = RTCDaysInMonth();
+   if( day > maxDay )
+      RTCWriteTimeDateRegister( RTC_DATE_DATE_REG, ((maxDay / 10) << 4 ) + maxDay % 10 );
+}
+
 static char * DateYearPara( uint8_t operationType, int16_t * paraValue )
 {
-   return ParameterOperationsTimeValues( 0xff, 0x00, operationType, paraValue, D_DATE_YEAR, MIN_DATE_YEAR, MAX_DATE_YEAR, RTC_DATE_YEAR_REG );
+   char * str = ParameterOperationsTimeValues( 0xff, 0x00, operationType, paraValue, D_DATE_YEAR, MIN_DATE_YEAR, MAX_DATE_YEAR, RTC_DATE_YEAR_REG );
+   RTCClampDay( operationType );
+   return str;
 }
 
 static char * DateMonthPara( uint8_t operationType, int16_t * paraValue )
 {
-   return ParameterOperationsTimeValues( 0x1f, 0x0, operationType, paraValue, D_DATE_MONTH, MIN_DATE_MONTH, MAX_DATE_MONTH, RTC_DATE_MONTH_REG );
+   char * str = ParameterOperationsTimeValues( 0x1f, 0x0, operationType, paraValue, D_DATE_MONTH, MIN_DATE_MONTH, MAX_DATE_MONTH, RTC_DATE_MONTH_REG );
+   RTCClampDay( operationType );
+   return str;
 }
 
 static char * DateDayPara( uint8_t operationType, int16_t * paraValue )
 {
-   return ParameterOperationsTimeValues( 0x3f, 0x0, operationType, paraValue, D_DATE_DAY, MIN_DATE_DAY, MAX_DATE_DAY, RTC_DATE_DATE_REG );
+   // Upper limit follows the current month instead of always 31
+   uint8_t maxDay = MAX_DATE_DAY;
+   if( operationType != (uint8_t)PARA_READ_VALUE_ONLY && operationType != (uint8_t)PARA_READ )
+      maxDay = RTCDaysInMonth();
+   return ParameterOperationsTimeValues( 0x3f, 0x0, operationType, paraValue, D_DATE_DAY, MIN_DATE_DAY, maxDay, RTC_DATE_DATE_REG );
 }
 
 
@@ -3257,7 +3333,7 @@ static void ParameterOperationsSettings( uint8_t operationType, int16_t * paraVa
 {
    if(( operationType == (uint8_t)PARA_READ_VALUE_ONLY ) || ( operationType == (uint8_t)PARA_READ ))
    {
-      *paraValue = OSReadEEPromWord((unsigned int *)eepromAddr);
+      *paraValue = ReadParaEeprom(eepromAddr);
 	  return;
    }
    else if( operationType == (uint8_t)PARA_DEFAULT )
@@ -3274,9 +3350,7 @@ static void ParameterOperationsSettings( uint8_t operationType, int16_t * paraVa
 
    if(!isMasterReset)
    {
-	   eeprom_address = eepromAddr;
-	   eeprom_value = *paraValue;
-	   eeprom_write_timeout = EEPROM_WRITE_TIMEOUT;
+	   QueueParaEepromWrite(eepromAddr, *paraValue);
    }
    else
    {
@@ -3289,7 +3363,7 @@ static void ParameterOperationsSettingsRollover( uint8_t operationType, int16_t 
 {
    if(( operationType == (uint8_t)PARA_READ_VALUE_ONLY ) || ( operationType == (uint8_t)PARA_READ ))
    {
-      *paraValue = OSReadEEPromWord((unsigned int *)eepromAddr);
+      *paraValue = ReadParaEeprom(eepromAddr);
 	  return;
    }
    else if( operationType == (uint8_t)PARA_DEFAULT )
@@ -3306,9 +3380,7 @@ static void ParameterOperationsSettingsRollover( uint8_t operationType, int16_t 
 
    if(!isMasterReset)
    {
-	   eeprom_address = eepromAddr;
-	   eeprom_value = *paraValue;
-	   eeprom_write_timeout = EEPROM_WRITE_TIMEOUT;
+	   QueueParaEepromWrite(eepromAddr, *paraValue);
    }
    else
    {

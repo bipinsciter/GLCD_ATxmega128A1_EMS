@@ -115,6 +115,17 @@ void PERIODIC_FUNC_NAME( void )
 		}
 	}
 	
+	if(u8_DFUresetTimer)		// set by the serial DFU command; display shows "< DFU MODE >"
+	{
+		u8_DFUresetTimer--;
+		if(!u8_DFUresetTimer)
+		{
+			//SoftReset ------------------
+			CPU_CCP  = CCP_IOREG_gc;
+			RST.CTRL = RST_SWRST_bm ;
+		}
+	}
+
 	if( IsLoggingEnabled() && --loggingTime == 0 )
 	{
 		loggingTime = GetParameterValue( LOGGING_INTERVAL );
@@ -155,7 +166,10 @@ void PERIODIC_FUNC_NAME( void )
 		BuzzerOff();
 	}
 	
-	buzzerTimeCounter = (buzzerTimeCounter + 1) % buzzerSpan;
+	if( buzzerSpan > 0 )		// ON+OFF time can both be 0: avoid modulo by zero
+		buzzerTimeCounter = (buzzerTimeCounter + 1) % buzzerSpan;
+	else
+		buzzerTimeCounter = 0;
 }
 
 void SuppressBuzzer()

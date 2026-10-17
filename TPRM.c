@@ -19,6 +19,7 @@
 #include "eepromAdr.h"
 #include "FreeRTOSBufferedSerial.h"
 #include <util/delay.h>
+#include <util/atomic.h>
 
 // Convenience macro for enabling pull-ups on specified pins on any port.
 #define __PORT_PULLUP(port, mask) { \
@@ -33,9 +34,9 @@ void InitSystemClock(void)
 	while(!(OSC.STATUS & OSC_RC32MRDY_bm));
 	
 	//Write CCP to change clock option otherwise change will not happens -----------------------------
-	CCP = CCP_IOREG_gc;	
-	asm("LDI R24,0x01"); //For switching to 32MHz internal RC. Modify 0x01 as required
-	asm("STS 0x0040,R24");
+	// _PROTECTED_WRITE guarantees the CLK.CTRL store lands within 4 cycles of the CCP
+	// write; the separate asm() statements did not, and clobbered R24 behind the compiler.
+	_PROTECTED_WRITE(CLK.CTRL, CLK_SCLKSEL_RC32M_gc);
 	//------------------------------------------------------------------------------------------------
 	
 	OSC.CTRL &= ~OSC_RC2MEN_bm;
@@ -433,11 +434,14 @@ void SetDefault(void)
 // Enumeration to make handling the reset reason cleaner in your application
 typedef enum {
 	RESET_UNKNOWN      = 0x00,
-	RESET_POWER_ON     = (1 << 0),
-	RESET_EXTERNAL     = (1 << 1),
-	RESET_WATCHDOG     = (1 << 2),
-	RESET_PDI          = (1 << 3),
-	RESET_SOFTWARE     = (1 << 4)
+	// Same bit positions as RST.STATUS (watchdog is bit 3, not 2; bit 2 is brown-out)
+	RESET_POWER_ON     = RST_PORF_bm,
+	RESET_EXTERNAL     = RST_EXTRF_bm,
+	RESET_BROWNOUT     = RST_BORF_bm,
+	RESET_WATCHDOG     = RST_WDRF_bm,
+	RESET_PDI          = RST_PDIRF_bm,
+	RESET_SOFTWARE     = RST_SRF_bm,
+	RESET_SPIKE        = RST_SDRF_bm
 } ResetReason_t;
 
 // Global variable to hold the detected reset reason
@@ -449,7 +453,7 @@ void Reset_Init(void)
 	uint8_t raw_status = RST.STATUS;
 	
 	// 2. Map the raw bits to our enumeration (or just use the raw byte)
-	g_reset_reason = (ResetReason_t)(raw_status & 0x1F);
+	g_reset_reason = (ResetReason_t)(raw_status & 0x7F);
 	
 	// 3. CRITICAL: Clear the status flags by writing 1s to the bits that were set.
 	// If you don't do this, old reset reasons will persist into the next reset.
@@ -457,7 +461,13 @@ void Reset_Init(void)
 }
 
 
-uint8_t ms50=0,DPTimer=0,TRTimer=0,PerodicTimer=0,DPAddTimer=0;
+// 50 ms ticks counted by the RTC ISR and consumed one per pass by the main loop,
+// so a pass that runs longer than 50 ms no longer loses ticks (software timers stay on time).
+#define MAX_PENDING_TICKS	20	// cap catch-up after a long block to 1 s
+static volatile uint8_t ms50Ticks=0;
+// Start values stagger the tasks so they never run in the same 50 ms tick:
+// DP on ticks 5,10,15..  Temp/RH on 3,8,13..  Periodic on 19,39,..
+uint8_t DPTimer=0,TRTimer=2,PerodicTimer=1,DPAddTimer=0;
 
 int main(void)                 // Main runs under the AvrX Stack
 {
@@ -473,10 +483,10 @@ int main(void)                 // Main runs under the AvrX Stack
 	
 	InitLockedPrintf();
    
-	SW_I2C1InterfaceInit();	//PORTC	=> DAC/Display
+	//SW_I2C1InterfaceInit();	//PORTC	=> DAC/Display
 	SW_I2C2InterfaceInit();	//PORTD => TempRH/DP1/RTC
-	SW_I2C3InterfaceInit();	//PORTE	=> DP3/PostTemp
-	SW_I2C4InterfaceInit();	//PORTF => DP2
+	//SW_I2C3InterfaceInit();	//PORTE	=> DP3/PostTemp
+	//SW_I2C4InterfaceInit();	//PORTF => DP2
    
 	InitRTC();
 	SetDefault();
@@ -511,23 +521,29 @@ int main(void)                 // Main runs under the AvrX Stack
 
 	Init_InternalRTC();
 	
+	// Watchdog ~8 s (it was never enabled, so every wdt_reset() did nothing).
+	// Enabled after init because UserInterfaceInit() waits 2 s.
+	wdt_enable(WDT_PER_8KCLK_gc);
+	
 	while(1)
 	{
 		wdt_reset();
 		 
 		SerialInterfaceTask();
 		
-		if(ms50 == 1)
+		if(ms50Ticks)
 		{
+			ATOMIC_BLOCK(ATOMIC_RESTORESTATE) { ms50Ticks--; }
+			
 			UARTC0RxTimeout();
 			UARTC1RxTimeout();
 			
 			UserInterfaceTask();	//50 msec
 			
 			DPTimer++;
-			if(DPTimer>=5)
+			if(DPTimer>=10)
 			{
-				DEVICEIO_FUNC_NAME();	//100 msec
+				DEVICEIO_FUNC_NAME();	//500 msec
 				DPTimer=0;
 			}
 			
@@ -564,13 +580,12 @@ int main(void)                 // Main runs under the AvrX Stack
 				DPAddTimer=0;
 			}
 			
-			ms50=0;
 		}
 	}
 }
 
 ISR(RTC_OVF_vect)
 {
-	ms50 = 1;
+	if(ms50Ticks < MAX_PENDING_TICKS) ms50Ticks++;
 }
 

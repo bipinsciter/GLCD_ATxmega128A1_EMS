@@ -11,6 +11,16 @@
 #define SENS_ADD_XGZP6891D	    (0x7F*2)
 #define SENS_ADD_WF200DP	    (0x6D*2)
 
+// Pa (float) -> 0.01 Pa counts in a 16-bit int, saturated.
+// (uint16_t)(dpVal*100) wrapped beyond +/-327.67 Pa and is undefined for negative values.
+static int PaToCounts( float pa )
+{
+	float v = pa * 100;
+	if( v > 32767.0 ) return 32767;
+	if( v < -32768.0 ) return -32768;
+	return (int)v;
+}
+
 uint8_t GetSensorDP1( int * pressure)
 {
 	switch( GetParameterValue(DP1_SENS_TYPE))
@@ -53,7 +63,7 @@ uint8_t GetSensorDP1_SM9543( int * pressure )
 		dpVal *= 0.0762951094834821;;
 		dpVal -= 500;;
 		
-		*pressure = (uint16_t)(dpVal*100);
+		*pressure = PaToCounts(dpVal);
 		
 		return ERROR_OK;
 	}
@@ -94,17 +104,17 @@ uint8_t GetSensorDP1_XGZP6891D( int *pressure)
 	
 	if(differanceDP == 0xFFFFFF) 
 	{
-		ERROR_DP1_SENS_I2C;
+		return ERROR_DP1_SENS_I2C;	// was missing "return": invalid reading was reported as OK
 	}
 	else
 	{
+		// 24-bit two's complement -> signed (the old unsigned subtraction turned negative DP into ~4e9)
 		if (differanceDP & 0x800000) 
-		{
-			differanceDP -= 16777216; // Shift 2's complement value into standard signed space
-		}
-		dpVal = (float)differanceDP;
+			dpVal = (float)((int32_t)differanceDP - 16777216L);
+		else
+			dpVal = (float)differanceDP;
 		dpVal = (dpVal * 0.000149012) - 625.0000559;
-		*pressure = (uint16_t)(dpVal*100);
+		*pressure = PaToCounts(dpVal);
 	}
 	return ERROR_OK;
 }
@@ -145,7 +155,7 @@ uint8_t GetSensorDP1_WF200DP( int *pressure)
 	
 	if(differanceDP == 0xFFFFFF)
 	{
-		ERROR_DP1_SENS_I2C;
+		return ERROR_DP1_SENS_I2C;	// was missing "return": invalid reading was reported as OK
 	}
 	else
 	{
@@ -160,7 +170,7 @@ uint8_t GetSensorDP1_WF200DP( int *pressure)
 		}
 
 		dpVal = ((float)pressure_signed / WF200DP_ZERO_COUNT) * WF200DP_FULL_SCALE_PA;
-		*pressure = (uint16_t)(dpVal*100);
+		*pressure = PaToCounts(dpVal);
 	}
 	return ERROR_OK;
 }
