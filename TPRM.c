@@ -377,44 +377,19 @@ void Init_InternalRTC(void)
 
 void SetDefault(void)
 {	
-	if(eeprom_read_word((unsigned int *)EA_DEFAULT_SAVE)!=0xABCD)
-	{
-		//OSWriteEEPromWord((unsigned int *)EA_CONFIG_SYSTEM, ~317);	
+	if(eeprom_read_word((unsigned int *)EA_DEFAULT_SAVE)!=0xABCE)
+	{	
 		OSWriteEEPromWord((unsigned int *)EA_CONFIG_SYSTEM, ~829);	
-	
-		//memset(&gu8_inOutput[0][0],0,160);
-		////Input ----------------------------------
-		//strcpy(&gu8_inOutput[0][0],"MANUAL");
-		//strcpy(&gu8_inOutput[1][0],"AUTO");
-		//strcpy(&gu8_inOutput[2][0],"ON");
-		//strcpy(&gu8_inOutput[3][0],"OFF");
-		//strcpy(&gu8_inOutput[4][0],"MANUAL");
-		//strcpy(&gu8_inOutput[5][0],"VFD");
-		//strcpy(&gu8_inOutput[6][0],"MANUAL");
-		//strcpy(&gu8_inOutput[7][0],"AUTO");
-		////Output ----------------------------------
-		//strcpy(&gu8_inOutput[8][0],"MANUAL");
-		//strcpy(&gu8_inOutput[9][0],"AUTO");
-		//strcpy(&gu8_inOutput[10][0],"MANUAL");
-		//strcpy(&gu8_inOutput[11][0],"AUTO");
-		//strcpy(&gu8_inOutput[12][0],"MANUAL");
-		//strcpy(&gu8_inOutput[13][0],"AUTO");
-		//strcpy(&gu8_inOutput[14][0],"MANUAL");
-		//strcpy(&gu8_inOutput[15][0],"AUTO");
-		//
-		//OSWriteEEPromBlock((uint8_t*)EA_IP1_HIGH_NAME,(uint8_t*)&gu8_inOutput[0][0],160);
-		
+
 		gu8_IsCOMDisable=0;
 		gu8_IsLCDDisable=0;
 		OSWriteEEPromWord((unsigned int *)LCD_CONTROL_ADDR, gu8_IsLCDDisable);
 		OSWriteEEPromWord((unsigned int *)COM_CONTROL_ADDR, gu8_IsCOMDisable);
 		
-		OSWriteEEPromWord((unsigned int *)EA_DEFAULT_SAVE, 0xABCD);
+		OSWriteEEPromWord((unsigned int *)EA_DEFAULT_SAVE, 0xABCE);
 	}
 	else
 	{
-		//OSReadEEPromBlock((uint8_t*)EA_IP1_HIGH_NAME,(uint8_t*)&gu8_inOutput[0][0],160);
-		//
 		gu8_IsLCDDisable=(uint8_t)OSReadEEPromWord((unsigned int *)LCD_CONTROL_ADDR);
 		if(gu8_IsLCDDisable>1)
 		{
@@ -475,18 +450,18 @@ int main(void)                 // Main runs under the AvrX Stack
 	cli();
 	
 	Reset_Init();
-   
 	InitSystemClock();	
-   
+    _delay_ms(5000);
+	
 	DisableUnusedModules();
 	InitGPIO();	
 	
 	InitLockedPrintf();
    
-	//SW_I2C1InterfaceInit();	//PORTC	=> DAC/Display
+	SW_I2C1InterfaceInit();	//PORTC	=> DAC/Display
 	SW_I2C2InterfaceInit();	//PORTD => TempRH/DP1/RTC
-	//SW_I2C3InterfaceInit();	//PORTE	=> DP3/PostTemp
-	//SW_I2C4InterfaceInit();	//PORTF => DP2
+	SW_I2C3InterfaceInit();	//PORTE	=> DP3/PostTemp
+	SW_I2C4InterfaceInit();	//PORTF => DP2
    
 	InitRTC();
 	SetDefault();

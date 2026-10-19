@@ -47,7 +47,7 @@
 #include "eepromAdr.h" 
 #include "rtc.h" 
 
-#define SOFTWARE_VERSION        305
+#define SOFTWARE_VERSION        306
 
 #define EEPROM_WRITE_TIMEOUT	30
 #define DP_AUTOCAL_HOLD_TICKS	60		// SETUP+DOWN hold time for DP auto-zero: 60 x 50 ms = 3 s
@@ -98,7 +98,7 @@
 #define D_DP3_RANGE						10000
               
 #define D_BROADCAST_INTERVAL            120   
-#define D_BROADCAST_PORT	            0           
+#define D_BROADCAST_PORT	            2           
 #define D_DISPLAY_INTERVAL              1
 #define D_SERIAL_BAUD_RATE_VAL          SERIAL_BAUD_57600
 #define D_SERIAL_DATA_STOP_PARITY_VAL   ((3<<SERIAL_DATA_BITS_SHIFT) | (0<<SERIAL_STOP_BIT_SHIFT) | (SERIAL_PARITY_NONE << SERIAL_PARITY_SHIFT))//3    // BIT 0-1 = Data bits, BIT 2 = STOP bits, BIT 3-4 = PARITY :: 8 bit, 1 stop, no parity
